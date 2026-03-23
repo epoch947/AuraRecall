@@ -6,7 +6,7 @@ import { useRitualStore } from '@/lib/store/useRitualStore'
 import { phaseVariants } from '@/components/RitualContainer'
 
 export default function EntryPhase() {
-  const { advanceTo, viewArchive } = useRitualStore()
+  const { advanceTo, viewArchive, injectDummyData } = useRitualStore()
 
   return (
     <motion.div
@@ -16,6 +16,18 @@ export default function EntryPhase() {
       exit="exit"
       className="relative w-full h-full flex flex-col items-center justify-center"
     >
+      {/* Dev data injector — development only */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={injectDummyData}
+          className="absolute top-4 left-4 z-50 font-mono text-[9px]
+                     text-oatmeal/30 hover:text-oatmeal/70 tracking-widest
+                     uppercase transition-colors duration-300"
+        >
+          [dev: inject data]
+        </button>
+      )}
+
       {/* Full-screen background video */}
       <video
         src="/assets/1_2.mp4"

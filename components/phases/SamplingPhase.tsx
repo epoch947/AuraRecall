@@ -4,10 +4,47 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import Image from 'next/image'
 import { Wind } from 'lucide-react'
-import { useRitualStore } from '@/lib/store/useRitualStore'
+import { useRitualStore, EchoRecord } from '@/lib/store/useRitualStore'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { extractMoodColor } from '@/lib/utils/semanticColor'
 import { phaseVariants } from '@/components/RitualContainer'
+
+// ─── Echo Whisper helpers ─────────────────────────────────────────────────────
+
+function parseHSL(hsl: string): { h: number; s: number; l: number } | null {
+  const m = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/)
+  if (!m) return null
+  return { h: +m[1], s: +m[2], l: +m[3] }
+}
+
+function hueDist(a: number, b: number): number {
+  const d = Math.abs(a - b)
+  return Math.min(d, 360 - d)
+}
+
+function findEchoMatch(currentColor: string, echoes: EchoRecord[]): EchoRecord | null {
+  const curr = parseHSL(currentColor)
+  if (!curr) return null
+  const today = new Date().toDateString()
+
+  let best: EchoRecord | null = null
+  let bestScore = Infinity
+
+  for (const echo of echoes) {
+    if (new Date(echo.createdAt).toDateString() === today) continue
+    const c = parseHSL(echo.semanticColor)
+    if (!c) continue
+    const score = hueDist(curr.h, c.h) + Math.abs(curr.l - c.l)
+    if (score < bestScore) {
+      bestScore = score
+      best = echo
+    }
+  }
+
+  return bestScore < 40 ? best : null
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function SamplingPhase() {
   const {
@@ -16,10 +53,12 @@ export default function SamplingPhase() {
     moodColor, setMoodColor,
     setWeatherData, weatherData,
     resetRitual,
+    pastEchoes,
   } = useRitualStore()
 
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [isDissolving, setIsDissolving] = useState(false)
+  const [echoMatch, setEchoMatch] = useState<EchoRecord | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const textareaControls = useAnimation()
 
@@ -56,6 +95,15 @@ export default function SamplingPhase() {
     }
   }, [debouncedText, setMoodColor])
 
+  // Echo Whisper — surface a past echo with similar mood color
+  useEffect(() => {
+    if (debouncedText.length < 10 || pastEchoes.length === 0) {
+      setEchoMatch(null)
+      return
+    }
+    setEchoMatch(findEchoMatch(moodColor, pastEchoes))
+  }, [moodColor, debouncedText, pastEchoes])
+
   const handleRelease = async () => {
     if (isDissolving) return
     setIsDissolving(true)
@@ -77,6 +125,30 @@ export default function SamplingPhase() {
       className="relative w-full h-full flex flex-col items-center justify-center"
       style={{ backgroundColor: moodColor, transition: 'background-color 3000ms ease-in-out' }}
     >
+      {/* Echo Whisper — ghost from the past */}
+      <AnimatePresence>
+        {echoMatch && !isDissolving && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: 'easeInOut' }}
+            className="absolute top-16 inset-x-0 z-20 flex justify-center pointer-events-none px-8"
+          >
+            <p className="font-serif text-sm italic text-charcoal/40 tracking-wide text-center max-w-xs leading-relaxed">
+              An echo from{' '}
+              {new Date(echoMatch.createdAt).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+              })}
+              {': '}
+              {echoMatch.originalText.slice(0, 60)}
+              {echoMatch.originalText.length > 60 ? '…' : ''}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Background image */}
       <div className="absolute inset-0">
         <Image
