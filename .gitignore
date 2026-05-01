@@ -1,5 +1,8 @@
 node_modules/
 .next/
+.env
 .env.local
 .debug_screenshots/
 .claude/
+
+/lib/generated/prisma

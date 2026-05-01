@@ -14,7 +14,7 @@ const LOADING_MESSAGES = [
 ]
 
 export default function VizLabPhase() {
-  const { advanceTo, setEchoData } = useRitualStore()
+  const { advanceTo, moodText, weatherData, setEchoData, setMoodColor } = useRitualStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoEnded, setVideoEnded] = useState(false)
   const [apiReady, setApiReady] = useState(false)
@@ -32,9 +32,17 @@ export default function VizLabPhase() {
 
   // Fire API call immediately on mount (parallel with video)
   useEffect(() => {
-    fetch('/api/generate-echo')
+    fetch('/api/generate-echo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        moodText,
+        weather: weatherData?.description ?? 'Unknown Skies',
+      }),
+    })
       .then((r) => r.json())
       .then((data) => {
+        if (data.semanticColor) setMoodColor(data.semanticColor)
         setEchoData(data)
         setApiReady(true)
       })

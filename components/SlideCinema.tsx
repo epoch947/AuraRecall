@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
-import { Download, Check } from 'lucide-react'
+import { Download, Check, Volume2, VolumeX } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import { useSonicLandscape } from '@/lib/hooks/useSonicLandscape'
 
 // ─── Data contract ────────────────────────────────────────────────────────────
 
@@ -207,7 +208,7 @@ function Slide3({
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-oatmeal">
+    <div ref={posterRef} className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-oatmeal">
 
       {/* ── Layer 1: Enso circle watermark — single centered instance ── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -222,9 +223,8 @@ function Slide3({
         </div>
       </div>
 
-      {/* ── Layer 2: Poster — captured area ── */}
+      {/* ── Layer 2: Poster content ── */}
       <div
-        ref={posterRef}
         className="relative z-10 flex flex-col items-center gap-6 mx-auto
                    w-[min(600px,90vw)] px-14 py-12 min-h-[420px]"
       >
@@ -248,11 +248,9 @@ function Slide3({
         </p>
       </div>
 
-      {/* ── Layer 3: Export button + Close & Return — both excluded from PNG ── */}
-      <div
-        data-html-to-image-ignore="true"
-        className="relative z-10 mt-12 flex flex-col items-center gap-5"
-      >
+      {/* ── Layer 3: Export button + Close & Return — hidden during capture ── */}
+      {!isCapturing && (
+      <div className="relative z-10 mt-12 flex flex-col items-center gap-5">
         {/* Save Memory button — three states */}
         <motion.button
           whileHover={!saved && !isCapturing ? { scale: 1.03 } : {}}
@@ -288,6 +286,7 @@ function Slide3({
           Close &amp; Return
         </button>
       </div>
+      )}
     </div>
   )
 }
@@ -308,6 +307,17 @@ export default function SlideCinema({
   const [currentSlide, setCurrentSlide] = useState(initialSlide)
   const [isPaused, setIsPaused] = useState(false)
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
+  const [isMuted, setIsMuted] = useState(false)
+
+  // Ambient audio — active for the full Cinema phase
+  useSonicLandscape(true, echoData.semanticColor, echoData.weather)
+
+  // Sync mute toggle with Tone.Destination
+  useEffect(() => {
+    import('tone').then(({ getDestination }) => {
+      getDestination().mute = isMuted
+    })
+  }, [isMuted])
 
   // Auto-advance — single timeout per slide, no stale-closure risk
   useEffect(() => {
@@ -335,6 +345,23 @@ export default function SlideCinema({
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-charcoal select-none">
+
+      {/* ── Mute toggle (excluded from PNG) ── */}
+      <div
+        data-html-to-image-ignore="true"
+        className="absolute bottom-6 right-6 z-50"
+      >
+        <button
+          onClick={() => setIsMuted((m) => !m)}
+          className="opacity-40 hover:opacity-90 transition-opacity duration-300 text-oatmeal"
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted
+            ? <VolumeX size={16} strokeWidth={1.5} />
+            : <Volume2 size={16} strokeWidth={1.5} />
+          }
+        </button>
+      </div>
 
       {/* ── Progress bars (excluded from PNG) ── */}
       <div

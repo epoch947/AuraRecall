@@ -2,9 +2,14 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Moon } from 'lucide-react'
 import { useRitualStore, EchoRecord } from '@/lib/store/useRitualStore'
 import { phaseVariants } from '@/components/RitualContainer'
+
+interface Pattern {
+  title: string
+  description: string
+}
 
 function MemoryPixel({
   record,
@@ -31,6 +36,31 @@ function MemoryPixel({
 export default function ArchiveGallery() {
   const { pastEchoes, advanceTo } = useRitualStore()
   const [hoveredRecord, setHoveredRecord] = useState<EchoRecord | null>(null)
+  const [isAnalyzing, setIsAnalyzing]     = useState(false)
+  const [patterns, setPatterns]           = useState<Pattern[] | null>(null)
+
+  async function handleAnalyze() {
+    setIsAnalyzing(true)
+    try {
+      const echoes = pastEchoes.map((e) => ({
+        text:    e.originalText,
+        color:   e.semanticColor,
+        weather: e.weather,
+        date:    e.createdAt,
+      }))
+      const res  = await fetch('/api/generate-pattern', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ echoes }),
+      })
+      const data = (await res.json()) as { patterns?: Pattern[] }
+      if (data.patterns) setPatterns(data.patterns)
+    } catch (err) {
+      console.error('[ArchiveGallery] pattern analysis failed:', err)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   return (
     <motion.div
@@ -54,6 +84,23 @@ export default function ArchiveGallery() {
         <p className="font-mono text-[10px] text-charcoal/30 tracking-[0.35em] uppercase">
           Aura Topography
         </p>
+        {pastEchoes.length >= 5 && (
+          <button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+            className="ml-auto flex items-center gap-2 font-mono text-[10px]
+                       text-charcoal/50 hover:text-charcoal tracking-[0.25em]
+                       uppercase transition-colors duration-300 disabled:pointer-events-none"
+          >
+            <motion.span
+              animate={isAnalyzing ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
+              transition={isAnalyzing ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : {}}
+            >
+              <Moon size={12} strokeWidth={1.5} />
+            </motion.span>
+            {isAnalyzing ? 'Reading...' : 'Moon Report'}
+          </button>
+        )}
       </div>
 
       {/* Mosaic grid */}
@@ -77,6 +124,79 @@ export default function ArchiveGallery() {
           </div>
         )}
       </div>
+
+      {/* Analyzing — loading overlay */}
+      <AnimatePresence>
+        {isAnalyzing && (
+          <motion.div
+            key="analyzing-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-50 bg-oatmeal/80 backdrop-blur-sm
+                       flex items-center justify-center"
+          >
+            <motion.p
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              className="font-serif text-lg text-charcoal/50 tracking-widest italic"
+            >
+              Consulting the echoes…
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Moon Phase Report overlay */}
+      <AnimatePresence>
+        {patterns && (
+          <motion.div
+            key="pattern-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            className="fixed inset-0 z-50 bg-charcoal/95 backdrop-blur-md
+                       flex flex-col items-center justify-center overflow-y-auto px-8 py-16"
+          >
+            <p className="font-mono text-[10px] text-oatmeal/30 tracking-[0.35em] uppercase mb-24">
+              Subconscious Patterns
+            </p>
+            <motion.div
+              className="flex flex-col items-center gap-24 max-w-2xl w-full"
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.45 } } }}
+            >
+              {patterns.map((pattern, i) => (
+                <motion.div
+                  key={i}
+                  className="flex flex-col gap-4 text-center"
+                  variants={{
+                    hidden:  { opacity: 0, y: 24 },
+                    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } },
+                  }}
+                >
+                  <h2 className="font-serif text-2xl text-oatmeal tracking-widest leading-tight">
+                    {pattern.title}
+                  </h2>
+                  <p className="font-serif text-lg text-oatmeal/70 leading-relaxed max-w-2xl text-center">
+                    {pattern.description}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
+            <button
+              onClick={() => setPatterns(null)}
+              className="mt-24 font-mono text-[10px] text-oatmeal/30 hover:text-oatmeal/70
+                         tracking-[0.35em] uppercase transition-colors duration-300"
+            >
+              Return
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hover tooltip — fixed bottom panel */}
       <AnimatePresence>
