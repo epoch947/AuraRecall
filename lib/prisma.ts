@@ -1,6 +1,15 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@/lib/generated/prisma/client'
 
-const prismaClientSingleton = () => new PrismaClient()
+// Vercel Postgres exposes POSTGRES_PRISMA_URL (pooled).
+// Fall back to DATABASE_URL for local development.
+const connectionString =
+  process.env.DATABASE_URL ??
+  process.env.POSTGRES_PRISMA_URL ??
+  ''
+
+const prismaClientSingleton = () =>
+  new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 declare global {
   // eslint-disable-next-line no-var

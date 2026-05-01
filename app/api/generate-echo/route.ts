@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import prisma from '@/lib/prisma'
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -29,9 +30,10 @@ export async function POST(req: Request) {
     return NextResponse.json(mockResponse())
   }
 
-  const { moodText, weather } = (await req.json()) as {
+  const { moodText, weather, isPublic } = (await req.json()) as {
     moodText: string
     weather: string
+    isPublic?: boolean
   }
 
   // ── Stage 1: OpenAI — must succeed, else fall back to mock ─────────────────
@@ -89,6 +91,14 @@ You must respond ONLY with a JSON object containing exactly these three string k
   } catch (err) {
     console.error('[generate-echo] DALL-E 3 failed:', err)
     imageUrl = '/assets/4_1_runtime_cover_mock.jpg'
+  }
+
+  // Non-blocking pool write — only AI-generated fields, never raw moodText
+  if (isPublic) {
+    void prisma.publicEcho
+      .create({ data: { color: llm.semanticColor, insight: llm.socraticQuestion, weather } })
+      .then((r) => console.log('[generate-echo] pool write ok:', r.id))
+      .catch((err) => console.error('[generate-echo] pool write failed:', err))
   }
 
   return NextResponse.json({
