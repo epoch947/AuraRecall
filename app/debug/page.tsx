@@ -5,9 +5,8 @@ import { useEffect } from 'react'
 import { useRitualStore } from '@/lib/store/useRitualStore'
 import SlideCinema from '@/components/SlideCinema'
 
-if (process.env.NODE_ENV !== 'development') notFound()
-
 export default function DebugPage() {
+  if (process.env.NODE_ENV !== 'development') notFound()
   useEffect(() => {
     useRitualStore.getState().injectDummyData()
     useRitualStore.setState({ phase: 'CINEMA' })
