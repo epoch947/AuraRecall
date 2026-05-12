@@ -1,7 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Archive } from 'lucide-react'
+import { Archive, Waves, Mail } from 'lucide-react'
+import Link from 'next/link'
 import { useRitualStore } from '@/lib/store/useRitualStore'
 import { phaseVariants } from '@/components/RitualContainer'
 
@@ -81,20 +82,43 @@ export default function EntryPhase() {
         </motion.button>
       </div>
 
-      {/* Archive entry — ghost button, delayed appearance */}
-      <motion.button
+      {/* Bottom navigation — ghost links, delayed appearance */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 3.0, duration: 0.8 }}
-        onClick={viewArchive}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2
-                   flex items-center gap-2 font-mono text-[10px]
-                   text-oatmeal/40 hover:text-oatmeal/80
-                   tracking-[0.35em] uppercase transition-colors duration-500"
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8"
       >
-        <Archive size={11} strokeWidth={1.5} />
-        Memory Archive
-      </motion.button>
+        <Link
+          href="/resonance"
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Waves size={11} strokeWidth={1.5} />
+          Resonance Pool
+        </Link>
+
+        <button
+          onClick={viewArchive}
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Archive size={11} strokeWidth={1.5} />
+          Memory Archive
+        </button>
+
+        <Link
+          href="/inbox"
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Mail size={11} strokeWidth={1.5} />
+          Inbox
+        </Link>
+      </motion.div>
     </motion.div>
   )
 }
