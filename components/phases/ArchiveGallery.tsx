@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Moon } from 'lucide-react'
 import { useRitualStore, EchoRecord } from '@/lib/store/useRitualStore'
 import { phaseVariants } from '@/components/RitualContainer'
+import TopographyMap from '@/components/TopographyMap'
 
 interface Pattern {
   title: string
@@ -34,10 +35,14 @@ function MemoryPixel({
 }
 
 export default function ArchiveGallery() {
-  const { pastEchoes, advanceTo } = useRitualStore()
+  const { pastEchoes: rawEchoes, advanceTo } = useRitualStore()
+  // Deduplicate by ID — guards against stale persisted store having duplicate entries
+  const seen = new Set<string>()
+  const pastEchoes = rawEchoes.filter((e) => seen.has(e.id) ? false : (seen.add(e.id), true))
   const [hoveredRecord, setHoveredRecord] = useState<EchoRecord | null>(null)
   const [isAnalyzing, setIsAnalyzing]     = useState(false)
   const [patterns, setPatterns]           = useState<Pattern[] | null>(null)
+  const [viewMode, setViewMode]           = useState<'mosaic' | 'topography'>('topography')
 
   async function handleAnalyze() {
     setIsAnalyzing(true)
@@ -84,6 +89,21 @@ export default function ArchiveGallery() {
         <p className="font-mono text-[10px] text-charcoal/30 tracking-[0.35em] uppercase">
           Aura Topography
         </p>
+
+        {/* View toggle */}
+        <div className="flex items-center gap-4">
+          {(['topography', 'mosaic'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`font-mono text-[10px] tracking-[0.25em] uppercase transition-colors duration-200
+                          ${viewMode === mode ? 'text-charcoal' : 'text-charcoal/25 hover:text-charcoal/50'}`}
+            >
+              {mode === 'topography' ? 'Map' : 'Grid'}
+            </button>
+          ))}
+        </div>
+
         {pastEchoes.length >= 5 && (
           <button
             onClick={handleAnalyze}
@@ -103,16 +123,20 @@ export default function ArchiveGallery() {
         )}
       </div>
 
-      {/* Mosaic grid */}
-      <div className="max-w-5xl mx-auto px-8 py-16">
-        {pastEchoes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 pt-24 opacity-40">
-            <p className="font-serif text-lg text-charcoal">No echoes yet.</p>
-            <p className="font-mono text-[10px] text-charcoal tracking-[0.3em] uppercase">
-              Begin your first ritual.
-            </p>
-          </div>
-        ) : (
+      {/* Main visualization */}
+      {pastEchoes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 pt-32 opacity-40">
+          <p className="font-serif text-lg text-charcoal">No echoes yet.</p>
+          <p className="font-mono text-[10px] text-charcoal tracking-[0.3em] uppercase">
+            Begin your first ritual.
+          </p>
+        </div>
+      ) : viewMode === 'topography' ? (
+        <div className="w-full" style={{ height: 'calc(100vh - 80px)' }}>
+          <TopographyMap echoes={pastEchoes} />
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto px-8 py-16">
           <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1">
             {[...pastEchoes].reverse().map((record) => (
               <MemoryPixel
@@ -122,8 +146,8 @@ export default function ArchiveGallery() {
               />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Analyzing — loading overlay */}
       <AnimatePresence>
@@ -198,9 +222,9 @@ export default function ArchiveGallery() {
         )}
       </AnimatePresence>
 
-      {/* Hover tooltip — fixed bottom panel */}
+      {/* Hover tooltip — fixed bottom panel (mosaic view only) */}
       <AnimatePresence>
-        {hoveredRecord && (
+        {viewMode === 'mosaic' && hoveredRecord && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

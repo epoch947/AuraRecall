@@ -13,6 +13,7 @@ model PublicEcho {
   insight    String   // AI-generated Socratic question
   weather    String   // Weather condition string
   resonances Int      @default(0) // Community ripple count
+  embedding  Json?    // OpenAI text-embedding-3-small vector (1536-dim), nullable for old rows
   createdAt  DateTime @default(now())
 
   @@index([createdAt(sort: Desc)])

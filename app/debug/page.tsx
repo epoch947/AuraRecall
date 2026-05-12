@@ -8,7 +8,10 @@ import SlideCinema from '@/components/SlideCinema'
 export default function DebugPage() {
   if (process.env.NODE_ENV !== 'development') notFound()
   useEffect(() => {
-    useRitualStore.getState().injectDummyData()
+    const { pastEchoes } = useRitualStore.getState()
+    if (!pastEchoes.some((e) => e.id.startsWith('dummy-'))) {
+      useRitualStore.getState().injectDummyData()
+    }
     useRitualStore.setState({ phase: 'CINEMA' })
   }, [])
 

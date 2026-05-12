@@ -93,12 +93,24 @@ You must respond ONLY with a JSON object containing exactly these three string k
     imageUrl = '/assets/4_1_runtime_cover_mock.jpg'
   }
 
-  // Non-blocking pool write — only AI-generated fields, never raw moodText
+  // Non-blocking pool write — only AI-generated fields + embedding, never raw moodText
   if (isPublic) {
-    void prisma.publicEcho
-      .create({ data: { color: llm.semanticColor, insight: llm.socraticQuestion, weather } })
-      .then((r) => console.log('[generate-echo] pool write ok:', r.id))
-      .catch((err) => console.error('[generate-echo] pool write failed:', err))
+    void (async () => {
+      try {
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+        const embRes = await openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: moodText,
+        })
+        const vector = embRes.data[0].embedding
+        const r = await prisma.publicEcho.create({
+          data: { color: llm.semanticColor, insight: llm.socraticQuestion, weather, embedding: vector },
+        })
+        console.log('[generate-echo] pool write + embedding ok:', r.id)
+      } catch (err) {
+        console.error('[generate-echo] pool write failed:', err)
+      }
+    })()
   }
 
   return NextResponse.json({
