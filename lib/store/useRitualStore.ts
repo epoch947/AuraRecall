@@ -37,6 +37,7 @@ interface RitualState {
   echoData: EchoData | null
   zenCompleted: boolean
   pastEchoes: EchoRecord[]
+  userId: string
 
   advanceTo: (phase: RitualPhase) => void
   setMoodText: (text: string) => void
@@ -48,6 +49,7 @@ interface RitualState {
   saveAndReset: () => void
   viewArchive: () => void
   injectDummyData: () => void
+  setUserId: (id: string) => void
 }
 
 const initialState = {
@@ -64,6 +66,7 @@ export const useRitualStore = create<RitualState>()(
     (set) => ({
       ...initialState,
       pastEchoes: [],
+      userId: '',
 
       advanceTo:        (phase)       => set({ phase }),
       setMoodText:      (moodText)    => set({ moodText }),
@@ -73,6 +76,7 @@ export const useRitualStore = create<RitualState>()(
       markZenCompleted: ()            => set({ zenCompleted: true }),
       resetRitual:      ()            => set(initialState),
 
+      setUserId:    (userId)      => set({ userId }),
       viewArchive:  ()            => set({ phase: 'ARCHIVE_GALLERY' }),
 
       injectDummyData: () =>

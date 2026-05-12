@@ -14,7 +14,7 @@ const LOADING_MESSAGES = [
 ]
 
 export default function VizLabPhase() {
-  const { advanceTo, moodText, weatherData, setEchoData, setMoodColor } = useRitualStore()
+  const { advanceTo, moodText, weatherData, setEchoData, setMoodColor, userId } = useRitualStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoEnded, setVideoEnded] = useState(false)
   const [apiReady, setApiReady] = useState(false)
@@ -38,6 +38,8 @@ export default function VizLabPhase() {
       body: JSON.stringify({
         moodText,
         weather: weatherData?.description ?? 'Unknown Skies',
+        isPublic: true,
+        userId,
       }),
     })
       .then((r) => r.json())

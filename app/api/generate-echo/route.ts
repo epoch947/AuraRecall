@@ -30,10 +30,11 @@ export async function POST(req: Request) {
     return NextResponse.json(mockResponse())
   }
 
-  const { moodText, weather, isPublic } = (await req.json()) as {
+  const { moodText, weather, isPublic, userId } = (await req.json()) as {
     moodText: string
     weather: string
     isPublic?: boolean
+    userId?: string
   }
 
   // ── Stage 1: OpenAI — must succeed, else fall back to mock ─────────────────
@@ -104,7 +105,7 @@ You must respond ONLY with a JSON object containing exactly these three string k
         })
         const vector = embRes.data[0].embedding
         const r = await prisma.publicEcho.create({
-          data: { color: llm.semanticColor, insight: llm.socraticQuestion, weather, embedding: vector },
+          data: { color: llm.semanticColor, insight: llm.socraticQuestion, weather, embedding: vector, authorId: userId ?? null },
         })
         console.log('[generate-echo] pool write + embedding ok:', r.id)
       } catch (err) {

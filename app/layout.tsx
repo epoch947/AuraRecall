@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import UserIdInit from '@/components/UserIdInit'
 
 export const metadata: Metadata = {
   title: 'AuraRecall',
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="washi-layer bg-oatmeal text-charcoal overflow-hidden h-screen w-screen">
+        <UserIdInit />
         {children}
       </body>
     </html>

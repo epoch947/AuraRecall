@@ -14,6 +14,7 @@ export async function GET() {
         insight:    true,
         weather:    true,
         resonances: true,
+        authorId:   true,
         createdAt:  true,
       },
     })
