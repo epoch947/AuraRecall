@@ -1,0 +1,33 @@
+'use client'
+
+import { notFound } from 'next/navigation'
+import { useEffect } from 'react'
+import { useRitualStore } from '@/features/journal/store/useRitualStore'
+import SlideCinema from '@/features/journal/components/SlideCinema'
+
+export default function DebugPage() {
+  if (process.env.NODE_ENV !== 'development') notFound()
+  useEffect(() => {
+    const { pastEchoes } = useRitualStore.getState()
+    if (!pastEchoes.some((e) => e.id.startsWith('dummy-'))) {
+      useRitualStore.getState().injectDummyData()
+    }
+    useRitualStore.setState({ phase: 'CINEMA' })
+  }, [])
+
+  const MOCK_ECHO = {
+    imageUrl: null,
+    insight: "If you didn't have to carry this weight tomorrow, what would you pick up instead?",
+    originalText:
+      'Today felt heavy but strangely beautiful. Like rain on warm pavement — the smell of something old being washed clean.',
+    weather: 'Soft Autumn Rain',
+    semanticColor: 'hsl(210, 22%, 63%)',
+    date: '23 March 2026',
+  }
+
+  return (
+    <div className="w-screen h-screen overflow-hidden">
+      <SlideCinema echoData={MOCK_ECHO} initialSlide={2} />
+    </div>
+  )
+}

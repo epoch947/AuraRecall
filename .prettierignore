@@ -1,0 +1,7 @@
+.next/
+coverage/
+node_modules/
+public/
+tmp/
+package-lock.json
+next-env.d.ts

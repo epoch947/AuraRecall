@@ -1,0 +1,124 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import { Archive, Waves, Mail } from 'lucide-react'
+import Link from 'next/link'
+import { useRitualStore } from '@/features/journal/store/useRitualStore'
+import { phaseVariants } from '@/features/journal/components/RitualContainer'
+
+export default function EntryPhase() {
+  const { advanceTo, viewArchive, injectDummyData } = useRitualStore()
+
+  return (
+    <motion.div
+      variants={phaseVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="relative w-full h-full flex flex-col items-center justify-center"
+    >
+      {/* Dev data injector — development only */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={injectDummyData}
+          className="absolute top-4 left-4 z-50 font-mono text-[9px]
+                     text-oatmeal/30 hover:text-oatmeal/70 tracking-widest
+                     uppercase transition-colors duration-300"
+        >
+          [dev: inject data]
+        </button>
+      )}
+
+      {/* Full-screen background video */}
+      <video
+        src="/assets/1_2.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Gradient veil for legibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50" />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-8">
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
+          className="font-serif text-4xl md:text-5xl text-oatmeal tracking-widest leading-relaxed"
+        >
+          Listen to your inner pulse
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.7 }}
+          transition={{ delay: 1.4, duration: 0.7 }}
+          className="font-mono text-xs text-linen tracking-[0.35em] uppercase"
+        >
+          AuraRecall · a moment of clarity
+        </motion.p>
+
+        {/* Begin button with glow */}
+        <motion.button
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 2.0, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          whileHover={{
+            scale: 1.05,
+            boxShadow: '0 0 40px rgba(230,228,224,0.5)',
+          }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => advanceTo('ZEN_TIMER')}
+          className="mt-4 px-12 py-3.5 border border-linen/60 text-linen font-mono
+                     text-sm tracking-[0.3em] uppercase
+                     hover:bg-linen/10 transition-colors duration-300
+                     shadow-[0_0_20px_rgba(230,228,224,0.2)]"
+        >
+          Begin
+        </motion.button>
+      </div>
+
+      {/* Bottom navigation — ghost links, delayed appearance */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 3.0, duration: 0.8 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8"
+      >
+        <Link
+          href="/resonance"
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Waves size={11} strokeWidth={1.5} />
+          Resonance Pool
+        </Link>
+
+        <button
+          onClick={viewArchive}
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Archive size={11} strokeWidth={1.5} />
+          Memory Archive
+        </button>
+
+        <Link
+          href="/inbox"
+          className="flex items-center gap-2 font-mono text-[10px]
+                     text-oatmeal/40 hover:text-oatmeal/80
+                     tracking-[0.35em] uppercase transition-colors duration-500"
+        >
+          <Mail size={11} strokeWidth={1.5} />
+          Inbox
+        </Link>
+      </motion.div>
+    </motion.div>
+  )
+}
