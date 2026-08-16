@@ -1,84 +1,58 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import {
+  anonymousUserIdSchema,
+  replyRequestSchema,
+  resourceIdSchema,
+} from '@/features/messaging/contracts'
+import { getConversation, replyToConversation } from '@/server/messaging/service'
 
-// GET /api/inbox/[id]?userId= — fetch a single conversation with all messages
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(request: Request, { params }: RouteContext) {
+  const conversationId = resourceIdSchema.safeParse((await params).id)
+  const userId = anonymousUserIdSchema.safeParse(new URL(request.url).searchParams.get('userId'))
+  if (!conversationId.success || !userId.success) {
+    return NextResponse.json(
+      { error: 'A valid conversation id and userId are required' },
+      { status: 400 },
+    )
+  }
+
   try {
-    const { id } = await params
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
-
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      include: {
-        echo: {
-          select: { id: true, color: true, insight: true, weather: true },
-        },
-        messages: {
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    })
-
-    if (!conversation) {
+    const result = await getConversation(conversationId.data, userId.data)
+    if (result.kind === 'not-found') {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
-
-    // Verify the requester is a participant
-    if (userId && conversation.initiatorId !== userId && conversation.receiverId !== userId) {
+    if (result.kind === 'forbidden') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
-    return NextResponse.json({ conversation })
-  } catch (err) {
-    console.error('[inbox/[id]] GET failed:', err)
+    return NextResponse.json({ conversation: result.conversation })
+  } catch (error) {
+    console.error('[inbox/[id]] GET failed:', error)
     return NextResponse.json({ error: 'Failed to fetch conversation' }, { status: 500 })
   }
 }
 
-// POST /api/inbox/[id] — add a message; accept conversation if it was PENDING
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const conversationId = resourceIdSchema.safeParse((await params).id)
+  const input = replyRequestSchema.safeParse(await request.json().catch(() => null))
+  if (!conversationId.success || !input.success) {
+    return NextResponse.json({ error: 'Invalid reply' }, { status: 400 })
+  }
+
   try {
-    const { id } = await params
-    const { senderId, content } = (await req.json()) as {
-      senderId: string
-      content:  string
-    }
-
-    if (!senderId?.trim() || !content?.trim()) {
-      return NextResponse.json({ error: 'senderId and content are required' }, { status: 400 })
-    }
-
-    const conversation = await prisma.conversation.findUnique({ where: { id } })
-    if (!conversation) {
+    const result = await replyToConversation(conversationId.data, input.data)
+    if (result.kind === 'not-found') {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
-    if (conversation.initiatorId !== senderId && conversation.receiverId !== senderId) {
+    if (result.kind === 'forbidden') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
-    const [message] = await prisma.$transaction([
-      prisma.message.create({
-        data: { conversationId: id, senderId, content },
-      }),
-      prisma.conversation.update({
-        where: { id },
-        data: {
-          updatedAt: new Date(),
-          ...(conversation.status === 'PENDING' ? { status: 'ACCEPTED' } : {}),
-        },
-      }),
-    ])
-
-    return NextResponse.json({ message }, { status: 201 })
-  } catch (err) {
-    console.error('[inbox/[id]] POST failed:', err)
+    return NextResponse.json({ message: result.message }, { status: 201 })
+  } catch (error) {
+    console.error('[inbox/[id]] POST failed:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
   }
 }

@@ -5,4 +5,5 @@ node_modules/
 .debug_screenshots/
 .claude/
 
-/lib/generated/prisma
+*.tsbuildinfo
+coverage/
