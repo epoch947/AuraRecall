@@ -12,6 +12,7 @@ export interface PoolEcho {
   insight: string
   weather: string
   resonances: number
-  authorId: string | null
+  canWhisper: boolean
+  isOwn: boolean
   createdAt: string
 }

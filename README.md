@@ -1,6 +1,6 @@
 # AuraRecall
 
-AuraRecall is a multimodal journaling experience built with the Next.js App Router. It turns a private journal entry into a visual echo, lets users inspect recurring emotional patterns, and supports anonymous resonance around intentionally shared echoes.
+AuraRecall is a multimodal journaling experience built with the Next.js App Router. It turns a private journal entry into a visual echo, lets users inspect recurring emotional patterns, and supports pseudonymous resonance around intentionally shared echoes.
 
 ## Architecture
 
@@ -9,10 +9,11 @@ The repository follows a feature-first structure. Route files stay small, browse
 | Directory             | Responsibility                                                 |
 | --------------------- | -------------------------------------------------------------- |
 | `app/`                | Routes, layouts, loading/error boundaries, and HTTP adapters   |
-| `features/identity/`  | Versioned anonymous browser identity                           |
+| `features/identity/`  | Clerk sign-in state and account controls                       |
 | `features/journal/`   | Ritual UI, journal state, visualization, and request contracts |
 | `features/resonance/` | Shared echo pool UI and contracts                              |
 | `features/messaging/` | Anonymous inbox UI and contracts                               |
+| `server/auth/`        | Session-to-database user resolution and account policy         |
 | `server/ai/`          | OpenAI client, prompts, generation, and embedding persistence  |
 | `server/db/`          | PostgreSQL pool, transactions, models, and repositories        |
 | `server/messaging/`   | Conversation authorization and persistence                     |
@@ -30,14 +31,16 @@ Server Components fetch initial server-owned data when possible. Interactive com
 
 ### PostgreSQL model
 
-| Table               | Purpose                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `public_echoes`     | Public AI output, anonymous author UUID, and `vector(1536)`  |
-| `conversations`     | Anonymous participant pair, referenced echo, and status      |
-| `messages`          | Ordered conversation messages with cascading conversation FK |
-| `schema_migrations` | Immutable migration IDs, checksums, and application time     |
+| Table                 | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `users`               | App-owned user profile, Clerk subject, role, and account status |
+| `public_echoes`       | Public AI output, registered author FK, and `vector(1536)`      |
+| `conversations`       | Authorized participant pair, referenced echo, and status        |
+| `messages`            | Ordered messages with sender and cascading conversation FKs     |
+| `auth_webhook_events` | Idempotency ledger for Clerk user synchronization               |
+| `schema_migrations`   | Immutable migration IDs, checksums, and application time        |
 
-Primary keys and anonymous identities use native PostgreSQL UUIDs, timestamps use `timestamptz`, and database checks enforce valid status, distinct participants, nonnegative resonance counts, and message length. Multi-write messaging operations use one checked-out connection and an explicit transaction.
+Primary keys use native PostgreSQL UUIDs, timestamps use `timestamptz`, and database checks enforce valid account and conversation states, distinct participants, nonnegative resonance counts, and message length. Multi-write messaging operations use one checked-out connection and an explicit transaction.
 
 Migration `002_legacy_prisma_compatibility.sql` temporarily exposes writable legacy views for the currently deployed Prisma build. Both old and new application versions therefore use the native tables as a single source of truth during cutover. Remove those views in a follow-up migration only after the refactored application is deployed everywhere.
 
@@ -45,29 +48,39 @@ Migration `002_legacy_prisma_compatibility.sql` temporarily exposes writable leg
 
 - `/` — journaling ritual
 - `/debug` — individual ritual phases for development
-- `/resonance` — anonymous public echo pool
-- `/inbox` — anonymous conversations
+- `/resonance` — pseudonymous public echo pool
+- `/sign-in` and `/sign-up` — Clerk authentication flows
+- `/inbox` — authenticated pseudonymous conversations
+- `/api/webhooks/clerk` — verified Clerk user lifecycle synchronization
 
 Route groups such as `(ritual)` and `(social)` organize layouts without changing public URLs.
 
 ## Local development
 
 1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and provide the required values.
-3. Check migration state with `npm run db:status`.
-4. Apply pending migrations with `npm run db:migrate`.
-5. Start the app with `npm run dev`.
+2. Create a Clerk application, enable the desired sign-in methods, and copy the keys into `.env`.
+3. Copy the remaining values from `.env.example` into `.env`.
+4. Check migration state with `npm run db:status`.
+5. Apply pending migrations with `npm run db:migrate`.
+6. Start the app with `npm run dev`.
 
 `USE_MOCK_API=true` runs the generative flows without OpenAI calls. A PostgreSQL connection is still required for database-backed resonance and messaging screens.
 
 ### Environment variables
 
-| Variable            | Purpose                                       |
-| ------------------- | --------------------------------------------- |
-| `USE_MOCK_API`      | Select mock AI and weather responses          |
-| `OPENAI_API_KEY`    | Text, image, and embedding generation         |
-| `DATABASE_URL`      | Pooled, TLS-enabled PostgreSQL connection URL |
-| `DATABASE_POOL_MAX` | Maximum connections per application instance  |
+| Variable                            | Purpose                                       |
+| ----------------------------------- | --------------------------------------------- |
+| `USE_MOCK_API`                      | Select mock AI and weather responses          |
+| `OPENAI_API_KEY`                    | Text, image, and embedding generation         |
+| `DATABASE_URL`                      | Pooled, TLS-enabled PostgreSQL connection URL |
+| `DATABASE_POOL_MAX`                 | Maximum connections per application instance  |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Browser-safe Clerk application key            |
+| `CLERK_SECRET_KEY`                  | Server-side Clerk API key                     |
+| `CLERK_WEBHOOK_SIGNING_SECRET`      | Verifies Clerk webhook signatures             |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`     | Application sign-in route                     |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`     | Application sign-up route                     |
+
+See [`docs/authentication.md`](docs/authentication.md) for the Clerk dashboard, webhook, migration, and Vercel rollout steps.
 
 ## Quality checks
 
@@ -96,6 +109,8 @@ Use `npm run check` for the first three checks together. `npm run format:check` 
 
 ## Identity and privacy
 
-AuraRecall's UUID-based shadow identity is a product-level pseudonym stored in the browser. It is not authentication. The server validates resource IDs and conversation membership, but a production system that needs strong account security should replace this identity mechanism with authenticated sessions and explicit authorization policies.
+Clerk provides authentication and Google OAuth/OIDC. PostgreSQL remains the authorization source of truth: the server maps the signed session to an internal `users.id`, validates account status, derives message participants from database relationships, and checks conversation membership at the resource boundary. Browser requests never choose participant or sender IDs, and API responses expose viewer-relative flags instead of other users' internal identifiers.
 
-Raw journal text is sent to OpenAI for generation and embeddings. Public persistence stores the generated color, reflective question, weather, embedding, and anonymous author ID; it does not store the raw journal text.
+Raw journal text is sent to OpenAI for generation and embeddings. Public persistence stores the generated color, reflective question, weather, embedding, and internal author reference; it does not store the raw journal text. Historical browser UUIDs are retained as non-authenticatable `LEGACY_GUEST` rows so older data remains referentially valid.
+
+The private Memory Archive remains local to the browser and is namespaced by the current Clerk user. Signing out or switching accounts resets the active journal state before loading the new account's local archive, preventing cross-account leakage on a shared browser.

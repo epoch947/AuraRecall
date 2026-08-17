@@ -51,9 +51,20 @@ export async function listLatestPublicEchoes(
 ): Promise<PublicEchoRecord[]> {
   const result = await database.query<PublicEchoRow>(
     `
-      SELECT id, color, insight, weather, resonances, author_id, created_at
-      FROM public_echoes
-      ORDER BY created_at DESC
+      SELECT
+        e.id,
+        e.color,
+        e.insight,
+        e.weather,
+        e.resonances,
+        CASE
+          WHEN u.account_type = 'REGISTERED' AND u.status = 'ACTIVE' THEN e.author_id
+          ELSE NULL
+        END AS author_id,
+        e.created_at
+      FROM public_echoes e
+      LEFT JOIN users u ON u.id = e.author_id
+      ORDER BY e.created_at DESC
       LIMIT $1
     `,
     [limit],
@@ -89,10 +100,14 @@ export async function findPublicEchoAuthor(
 ): Promise<string | null | undefined> {
   const result = await database.query<AuthorRow>(
     `
-      SELECT author_id
-      FROM public_echoes
-      WHERE id = $1::uuid
-      ${lock ? 'FOR SHARE' : ''}
+      SELECT e.author_id
+      FROM public_echoes e
+      JOIN users u ON u.id = e.author_id
+      WHERE
+        e.id = $1::uuid
+        AND u.account_type = 'REGISTERED'
+        AND u.status = 'ACTIVE'
+      ${lock ? 'FOR SHARE OF e, u' : ''}
     `,
     [echoId],
   )

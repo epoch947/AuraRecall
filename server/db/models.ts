@@ -1,6 +1,26 @@
 export type DatabaseExecutor = Pick<import('pg').Pool, 'query'>
 
 export type ConversationStatus = 'PENDING' | 'ACCEPTED'
+export type UserAccountType = 'REGISTERED' | 'LEGACY_GUEST'
+export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR'
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED'
+
+export interface UserRecord {
+  id: string
+  authProvider: string
+  authSubject: string
+  accountType: UserAccountType
+  email: string | null
+  emailVerifiedAt: string | null
+  displayName: string | null
+  avatarUrl: string | null
+  role: UserRole
+  status: UserStatus
+  createdAt: string
+  updatedAt: string
+  lastLoginAt: string | null
+  deletedAt: string | null
+}
 
 export interface PublicEchoRecord {
   id: string

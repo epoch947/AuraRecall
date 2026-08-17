@@ -161,16 +161,20 @@ export async function createConversationRecord(
 
 export async function acceptAndTouchConversation(
   conversationId: string,
+  actorId: string,
   database: DatabaseExecutor = getPool(),
 ): Promise<void> {
   await database.query(
     `
       UPDATE conversations
       SET
-        status = CASE WHEN status = 'PENDING' THEN 'ACCEPTED' ELSE status END,
+        status = CASE
+          WHEN status = 'PENDING' AND receiver_id = $2::uuid THEN 'ACCEPTED'
+          ELSE status
+        END,
         updated_at = now()
       WHERE id = $1::uuid
     `,
-    [conversationId],
+    [conversationId, actorId],
   )
 }

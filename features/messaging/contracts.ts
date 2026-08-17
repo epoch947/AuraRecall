@@ -1,39 +1,34 @@
 import { z } from 'zod'
 
 export const resourceIdSchema = z.string().uuid()
-export const anonymousUserIdSchema = resourceIdSchema
 
 export const createWhisperRequestSchema = z
   .object({
     echoId: resourceIdSchema,
-    initiatorId: anonymousUserIdSchema,
-    receiverId: anonymousUserIdSchema,
     content: z.string().trim().min(1).max(2000),
   })
-  .refine((value) => value.initiatorId !== value.receiverId, {
-    message: 'You cannot whisper to yourself',
-  })
+  .strict()
 
-export const replyRequestSchema = z.object({
-  senderId: anonymousUserIdSchema,
-  content: z.string().trim().min(1).max(2000),
-})
+export const replyRequestSchema = z
+  .object({
+    content: z.string().trim().min(1).max(2000),
+  })
+  .strict()
 
 export interface MessageRecord {
   id: string
   conversationId: string
-  senderId: string
   content: string
   createdAt: string
+  isMine: boolean
 }
 
 export interface ConversationSummary {
   id: string
   echoId: string
-  initiatorId: string
-  receiverId: string
   status: string
   updatedAt: string
+  isPendingForCurrentUser: boolean
   echo: { id: string; color: string; insight: string; weather: string }
   messages: MessageRecord[]
 }

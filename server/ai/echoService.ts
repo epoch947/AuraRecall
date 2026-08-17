@@ -80,6 +80,7 @@ export async function generateEcho(
 export async function persistPublicEcho(
   input: GenerateEchoRequest,
   generated: GeneratedEcho,
+  authorId: string,
 ): Promise<void> {
   const embedding = await getOpenAIClient().embeddings.create({
     model: 'text-embedding-3-small',
@@ -91,6 +92,6 @@ export async function persistPublicEcho(
     insight: generated.socraticQuestion,
     weather: input.weather,
     embedding: embedding.data[0].embedding,
-    authorId: input.userId ?? null,
+    authorId,
   })
 }

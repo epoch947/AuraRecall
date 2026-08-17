@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
-import { anonymousUserIdSchema } from '@/features/messaging/contracts'
 import { listConversations } from '@/server/messaging/service'
+import { requireCurrentAppUser } from '@/server/auth/currentUser'
+import { authenticationErrorResponse } from '@/server/auth/errors'
 
-export async function GET(request: Request) {
-  const userId = anonymousUserIdSchema.safeParse(new URL(request.url).searchParams.get('userId'))
-  if (!userId.success) {
-    return NextResponse.json({ error: 'A valid userId is required' }, { status: 400 })
-  }
-
+export async function GET() {
   try {
-    return NextResponse.json({ conversations: await listConversations(userId.data) })
+    const currentUser = await requireCurrentAppUser()
+    return NextResponse.json({ conversations: await listConversations(currentUser.id) })
   } catch (error) {
+    const response = authenticationErrorResponse(error)
+    if (response) return response
     console.error('[inbox] GET failed:', error)
     return NextResponse.json({ error: 'Failed to fetch inbox' }, { status: 500 })
   }

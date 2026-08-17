@@ -15,7 +15,6 @@ interface RitualState {
   echoData: EchoData | null
   zenCompleted: boolean
   pastEchoes: EchoRecord[]
-  userId: string
 
   advanceTo: (phase: RitualPhase) => void
   setMoodText: (text: string) => void
@@ -27,7 +26,6 @@ interface RitualState {
   saveAndReset: () => void
   viewArchive: () => void
   injectDummyData: () => void
-  setUserId: (id: string) => void
 }
 
 const initialState = {
@@ -39,12 +37,15 @@ const initialState = {
   zenCompleted: false,
 }
 
+function journalStorageName(authSubject: string | null): string {
+  return `aura-recall-echoes:${authSubject ?? 'signed-out'}`
+}
+
 export const useRitualStore = create<RitualState>()(
   persist(
     (set) => ({
       ...initialState,
       pastEchoes: [],
-      userId: '',
 
       advanceTo: (phase) => set({ phase }),
       setMoodText: (moodText) => set({ moodText }),
@@ -54,7 +55,6 @@ export const useRitualStore = create<RitualState>()(
       markZenCompleted: () => set({ zenCompleted: true }),
       resetRitual: () => set(initialState),
 
-      setUserId: (userId) => set({ userId }),
       viewArchive: () => set({ phase: 'ARCHIVE_GALLERY' }),
 
       injectDummyData: () =>
@@ -222,7 +222,7 @@ export const useRitualStore = create<RitualState>()(
         }),
     }),
     {
-      name: 'aura-recall-echoes',
+      name: journalStorageName(null),
       version: 1,
       storage: createJSONStorage(() => localStorage),
       migrate: (persistedState) => persistedState as Pick<RitualState, 'pastEchoes'>,
@@ -230,3 +230,9 @@ export const useRitualStore = create<RitualState>()(
     },
   ),
 )
+
+export async function switchRitualStoreIdentity(authSubject: string | null): Promise<void> {
+  useRitualStore.setState({ ...initialState, pastEchoes: [] })
+  useRitualStore.persist.setOptions({ name: journalStorageName(authSubject) })
+  await useRitualStore.persist.rehydrate()
+}

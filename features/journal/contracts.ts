@@ -6,7 +6,6 @@ export const generateEchoRequestSchema = z.object({
   moodText: z.string().trim().min(10).max(5000),
   weather: z.string().trim().min(1).max(200),
   isPublic: z.boolean().optional().default(false),
-  userId: z.string().uuid().optional(),
 })
 
 export const generatedEchoSchema = z.object({

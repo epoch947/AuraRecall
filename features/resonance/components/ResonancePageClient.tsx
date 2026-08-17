@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Mic } from 'lucide-react'
 import Link from 'next/link'
-import { useRitualStore } from '@/features/journal/store/useRitualStore'
+import { useAuth } from '@clerk/nextjs'
 import type { PoolEcho } from '@/features/resonance/contracts'
 
 interface WhisperState {
@@ -13,15 +13,18 @@ interface WhisperState {
   status: 'idle' | 'sending' | 'sent' | 'error'
 }
 
-export default function ResonancePageClient({ initialEchoes }: { initialEchoes: PoolEcho[] }) {
-  const userId = useRitualStore((s) => s.userId)
-  const [echoes] = useState<PoolEcho[]>(initialEchoes)
+export default function ResonancePageClient({
+  initialEchoes: echoes,
+}: {
+  initialEchoes: PoolEcho[]
+}) {
+  const { isSignedIn } = useAuth()
   const [whisper, setWhisper] = useState<WhisperState | null>(null)
 
   async function sendWhisper() {
-    if (!whisper || !userId || whisper.status === 'sending') return
+    if (!whisper || !isSignedIn || whisper.status === 'sending') return
     const echo = echoes.find((e) => e.id === whisper.echoId)
-    if (!echo?.authorId) return
+    if (!echo?.canWhisper || echo.isOwn) return
 
     setWhisper((w) => (w ? { ...w, status: 'sending' } : w))
 
@@ -31,8 +34,6 @@ export default function ResonancePageClient({ initialEchoes }: { initialEchoes: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           echoId: echo.id,
-          initiatorId: userId,
-          receiverId: echo.authorId,
           content: whisper.content,
         }),
       })
@@ -81,7 +82,6 @@ export default function ResonancePageClient({ initialEchoes }: { initialEchoes: 
 
         {echoes.map((echo) => {
           const isWhispering = whisper?.echoId === echo.id
-          const isOwn = userId && echo.authorId === userId
 
           return (
             <motion.div
@@ -114,9 +114,10 @@ export default function ResonancePageClient({ initialEchoes }: { initialEchoes: 
                     })}
                   </span>
 
-                  {/* Whisper button — only for echoes with a known author who isn't us */}
-                  {echo.authorId && !isOwn && (
+                  {/* Participant identities stay on the server; clients receive capabilities only. */}
+                  {isSignedIn && echo.canWhisper && !echo.isOwn && (
                     <button
+                      type="button"
                       onClick={() =>
                         setWhisper(
                           isWhispering ? null : { echoId: echo.id, content: '', status: 'idle' },
@@ -170,6 +171,7 @@ export default function ResonancePageClient({ initialEchoes }: { initialEchoes: 
                                        outline-none py-1 transition-colors duration-200"
                           />
                           <button
+                            type="button"
                             onClick={sendWhisper}
                             disabled={!whisper.content.trim() || whisper.status === 'sending'}
                             className="font-mono text-[9px] tracking-[0.25em] uppercase

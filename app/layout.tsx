@@ -1,18 +1,23 @@
 import type { Metadata } from 'next'
+import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import UserIdInit from '@/features/identity/components/UserIdInit'
+import AuthControls from '@/features/identity/components/AuthControls'
+import JournalIdentityScope from '@/features/identity/components/JournalIdentityScope'
 
 export const metadata: Metadata = {
   title: 'AuraRecall',
   description: 'A moment of clarity.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className="washi-layer bg-oatmeal text-charcoal">
-        <UserIdInit />
-        {children}
+        <ClerkProvider>
+          <JournalIdentityScope />
+          <AuthControls />
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   )

@@ -3,11 +3,23 @@
 import { motion } from 'framer-motion'
 import { Archive, Waves, Mail } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth, useClerk } from '@clerk/nextjs'
 import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
 
 export default function EntryPhase() {
   const { advanceTo, viewArchive, injectDummyData } = useRitualStore()
+  const { isLoaded, isSignedIn } = useAuth()
+  const { openSignIn } = useClerk()
+
+  function beginRitual() {
+    if (!isLoaded) return
+    if (!isSignedIn) {
+      openSignIn()
+      return
+    }
+    advanceTo('ZEN_TIMER')
+  }
 
   return (
     <motion.div
@@ -20,6 +32,7 @@ export default function EntryPhase() {
       {/* Dev data injector — development only */}
       {process.env.NODE_ENV === 'development' && (
         <button
+          type="button"
           onClick={injectDummyData}
           className="absolute top-4 left-4 z-50 font-mono text-[9px]
                      text-oatmeal/30 hover:text-oatmeal/70 tracking-widest
@@ -64,6 +77,7 @@ export default function EntryPhase() {
 
         {/* Begin button with glow */}
         <motion.button
+          type="button"
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 2.0, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
@@ -72,13 +86,14 @@ export default function EntryPhase() {
             boxShadow: '0 0 40px rgba(230,228,224,0.5)',
           }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => advanceTo('ZEN_TIMER')}
+          onClick={beginRitual}
+          disabled={!isLoaded}
           className="mt-4 px-12 py-3.5 border border-linen/60 text-linen font-mono
                      text-sm tracking-[0.3em] uppercase
                      hover:bg-linen/10 transition-colors duration-300
                      shadow-[0_0_20px_rgba(230,228,224,0.2)]"
         >
-          Begin
+          {isSignedIn ? 'Begin' : 'Sign in to begin'}
         </motion.button>
       </div>
 
@@ -100,6 +115,7 @@ export default function EntryPhase() {
         </Link>
 
         <button
+          type="button"
           onClick={viewArchive}
           className="flex items-center gap-2 font-mono text-[10px]
                      text-oatmeal/40 hover:text-oatmeal/80

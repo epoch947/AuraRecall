@@ -8,17 +8,15 @@ describe('journal contracts', () => {
       moodText: 'I felt peaceful while walking home.',
       weather: 'Clear Sky',
       isPublic: true,
-      userId: '5d65ea01-bbb0-4f65-8610-a7488fe2c63a',
     })
 
     expect(result.success).toBe(true)
   })
 
-  it('rejects short journal entries and malformed identities', () => {
+  it('rejects short journal entries', () => {
     const result = generateEchoRequestSchema.safeParse({
       moodText: 'short',
       weather: 'Rain',
-      userId: 'not-a-uuid',
     })
 
     expect(result.success).toBe(false)
