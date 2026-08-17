@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
             authSubject: event.data.id,
             email: primaryEmail?.email_address.toLowerCase() ?? null,
             emailVerifiedAt: primaryEmail?.verification?.status === 'verified' ? new Date() : null,
+            username: event.data.username ?? null,
             displayName,
             avatarUrl: event.data.image_url || null,
             lastLoginAt:

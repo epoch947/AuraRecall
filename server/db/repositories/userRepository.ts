@@ -17,6 +17,7 @@ interface UserRow {
   account_type: UserAccountType
   email: string | null
   email_verified_at: Date | null
+  username: string | null
   display_name: string | null
   avatar_url: string | null
   role: UserRole
@@ -32,6 +33,7 @@ export interface SyncAuthenticatedUserInput {
   authSubject: string
   email: string | null
   emailVerifiedAt: Date | null
+  username: string | null
   displayName: string | null
   avatarUrl: string | null
   lastLoginAt: Date | null
@@ -45,6 +47,7 @@ function mapUser(row: UserRow): UserRecord {
     accountType: row.account_type,
     email: row.email,
     emailVerifiedAt: row.email_verified_at ? toIsoString(row.email_verified_at) : null,
+    username: row.username,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
     role: row.role,
@@ -63,6 +66,7 @@ const userColumns = `
   account_type,
   email,
   email_verified_at,
+  username,
   display_name,
   avatar_url,
   role,
@@ -101,11 +105,12 @@ export async function upsertAuthenticatedUser(
         account_type,
         email,
         email_verified_at,
+        username,
         display_name,
         avatar_url,
         last_login_at
       )
-      VALUES ($1, $2, 'REGISTERED', $3, $4, $5, $6, $7)
+      VALUES ($1, $2, 'REGISTERED', $3, $4, $5, $6, $7, $8)
       ON CONFLICT (auth_provider, auth_subject) DO UPDATE
       SET
         account_type = 'REGISTERED',
@@ -113,6 +118,10 @@ export async function upsertAuthenticatedUser(
         email_verified_at = CASE
           WHEN users.status = 'DELETED' THEN NULL
           ELSE EXCLUDED.email_verified_at
+        END,
+        username = CASE
+          WHEN users.status = 'DELETED' THEN NULL
+          ELSE EXCLUDED.username
         END,
         display_name = CASE
           WHEN users.status = 'DELETED' THEN NULL
@@ -134,6 +143,7 @@ export async function upsertAuthenticatedUser(
       input.authSubject,
       input.email,
       input.emailVerifiedAt,
+      input.username,
       input.displayName,
       input.avatarUrl,
       input.lastLoginAt,
@@ -153,6 +163,7 @@ export async function softDeleteUserByAuthIdentity(
       SET
         email = NULL,
         email_verified_at = NULL,
+        username = NULL,
         display_name = NULL,
         avatar_url = NULL,
         status = 'DELETED',

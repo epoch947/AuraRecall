@@ -23,14 +23,44 @@ async function main() {
           auth_subject,
           account_type,
           email,
-          email_verified_at
+          email_verified_at,
+          username
         )
         VALUES
-          ($1::uuid, 'clerk', 'smoke-initiator', 'REGISTERED', 'initiator@smoke.test', now()),
-          ($2::uuid, 'clerk', 'smoke-receiver', 'REGISTERED', 'receiver@smoke.test', now())
+          ($1::uuid, 'clerk', 'smoke-initiator', 'REGISTERED', 'initiator@smoke.test', now(), 'smoke_initiator'),
+          ($2::uuid, 'clerk', 'smoke-receiver', 'REGISTERED', 'receiver@smoke.test', now(), 'smoke_receiver')
       `,
       [initiatorId, receiverId],
     )
+
+    const syncedUser = await client.query(
+      `
+        SELECT username
+        FROM users
+        WHERE auth_provider = 'clerk' AND auth_subject = 'smoke-initiator'
+      `,
+    )
+    if (syncedUser.rows[0]?.username !== 'smoke_initiator') {
+      throw new Error('Authenticated username persistence failed')
+    }
+
+    await client.query('SAVEPOINT username_uniqueness_check')
+    let duplicateUsernameRejected = false
+    try {
+      await client.query(
+        `
+          INSERT INTO users (auth_provider, auth_subject, account_type, username)
+          VALUES ('clerk', 'smoke-duplicate', 'REGISTERED', 'SMOKE_INITIATOR')
+        `,
+      )
+    } catch (error) {
+      duplicateUsernameRejected = error?.code === '23505'
+      await client.query('ROLLBACK TO SAVEPOINT username_uniqueness_check')
+    }
+    if (!duplicateUsernameRejected) {
+      throw new Error('Case-insensitive username uniqueness check failed')
+    }
+    await client.query('RELEASE SAVEPOINT username_uniqueness_check')
 
     const echo = await client.query(
       `

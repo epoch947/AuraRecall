@@ -5,6 +5,7 @@ CREATE TABLE users (
   account_type text NOT NULL DEFAULT 'REGISTERED',
   email text,
   email_verified_at timestamptz,
+  username text,
   display_name text,
   avatar_url text,
   role text NOT NULL DEFAULT 'USER',
@@ -17,12 +18,19 @@ CREATE TABLE users (
   CONSTRAINT users_account_type_valid CHECK (account_type IN ('REGISTERED', 'LEGACY_GUEST')),
   CONSTRAINT users_role_valid CHECK (role IN ('USER', 'ADMIN', 'MODERATOR')),
   CONSTRAINT users_status_valid CHECK (status IN ('ACTIVE', 'SUSPENDED', 'DELETED')),
-  CONSTRAINT users_email_not_blank CHECK (email IS NULL OR btrim(email) <> '')
+  CONSTRAINT users_email_not_blank CHECK (email IS NULL OR btrim(email) <> ''),
+  CONSTRAINT users_username_valid CHECK (
+    username IS NULL OR (btrim(username) <> '' AND char_length(username) BETWEEN 4 AND 64)
+  )
 );
 
 CREATE UNIQUE INDEX users_email_lower_unique
   ON users (lower(email))
   WHERE email IS NOT NULL AND deleted_at IS NULL;
+
+CREATE UNIQUE INDEX users_username_lower_unique
+  ON users (lower(username))
+  WHERE username IS NOT NULL AND deleted_at IS NULL;
 
 CREATE INDEX users_created_at_idx ON users (created_at DESC);
 

@@ -33,6 +33,7 @@ export async function getOptionalCurrentAppUser(): Promise<UserRecord | null> {
       authSubject: clerkUser.id,
       email: primaryEmail?.emailAddress.toLowerCase() ?? null,
       emailVerifiedAt: primaryEmail?.verification?.status === 'verified' ? new Date() : null,
+      username: clerkUser.username ?? null,
       displayName,
       avatarUrl: clerkUser.imageUrl || null,
       lastLoginAt: optionalDate(clerkUser.lastSignInAt),

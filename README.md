@@ -31,14 +31,14 @@ Server Components fetch initial server-owned data when possible. Interactive com
 
 ### PostgreSQL model
 
-| Table                 | Purpose                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `users`               | App-owned user profile, Clerk subject, role, and account status |
-| `public_echoes`       | Public AI output, registered author FK, and `vector(1536)`      |
-| `conversations`       | Authorized participant pair, referenced echo, and status        |
-| `messages`            | Ordered messages with sender and cascading conversation FKs     |
-| `auth_webhook_events` | Idempotency ledger for Clerk user synchronization               |
-| `schema_migrations`   | Immutable migration IDs, checksums, and application time        |
+| Table                 | Purpose                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `users`               | App-owned profile, optional username, Clerk subject, role/status |
+| `public_echoes`       | Public AI output, registered author FK, and `vector(1536)`       |
+| `conversations`       | Authorized participant pair, referenced echo, and status         |
+| `messages`            | Ordered messages with sender and cascading conversation FKs      |
+| `auth_webhook_events` | Idempotency ledger for Clerk user synchronization                |
+| `schema_migrations`   | Immutable migration IDs, checksums, and application time         |
 
 Primary keys use native PostgreSQL UUIDs, timestamps use `timestamptz`, and database checks enforce valid account and conversation states, distinct participants, nonnegative resonance counts, and message length. Multi-write messaging operations use one checked-out connection and an explicit transaction.
 
@@ -109,7 +109,7 @@ Use `npm run check` for the first three checks together. `npm run format:check` 
 
 ## Identity and privacy
 
-Clerk provides authentication and Google OAuth/OIDC. PostgreSQL remains the authorization source of truth: the server maps the signed session to an internal `users.id`, validates account status, derives message participants from database relationships, and checks conversation membership at the resource boundary. Browser requests never choose participant or sender IDs, and API responses expose viewer-relative flags instead of other users' internal identifiers.
+Clerk provides authentication and Google OAuth/OIDC. PostgreSQL remains the authorization source of truth: the server maps the signed session to an internal `users.id`, validates account status, derives message participants from database relationships, and checks conversation membership at the resource boundary. Clerk usernames are synchronized only as optional profile data and are never trusted as session identity. Browser requests never choose participant or sender IDs, and API responses expose viewer-relative flags instead of other users' internal identifiers.
 
 Raw journal text is sent to OpenAI for generation and embeddings. Public persistence stores the generated color, reflective question, weather, embedding, and internal author reference; it does not store the raw journal text. Historical browser UUIDs are retained as non-authenticatable `LEGACY_GUEST` rows so older data remains referentially valid.
 

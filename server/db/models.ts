@@ -12,6 +12,7 @@ export interface UserRecord {
   accountType: UserAccountType
   email: string | null
   emailVerifiedAt: string | null
+  username: string | null
   displayName: string | null
   avatarUrl: string | null
   role: UserRole

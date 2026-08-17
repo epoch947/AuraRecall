@@ -2,6 +2,8 @@
 
 AuraRecall uses Clerk for authentication and PostgreSQL for application users and authorization. Clerk owns credentials, OAuth handshakes, sessions, and account recovery. The application owns the stable internal user ID, role, status, public echoes, conversations, and messages.
 
+Clerk usernames are synchronized as optional profile data. PostgreSQL never uses a username to authenticate a request: every session is mapped by the immutable Clerk user ID. Because username is not required in the current Clerk configuration, Google and email users may have `username = NULL`; non-null usernames are constrained to 4-64 characters and are unique case-insensitively.
+
 ## 1. Configure Clerk
 
 1. Create a Clerk application for AuraRecall. If using the Vercel Marketplace integration, connect it to the same Vercel project.
@@ -45,7 +47,7 @@ npm run db:migrate
 npm run db:smoke
 ```
 
-Migration `003_authenticated_users.sql` creates the user and webhook-event tables, backfills historical UUIDs as `LEGACY_GUEST`, and adds user foreign keys. It also keeps the prior Prisma compatibility views writable during the rollback window.
+Migration `003_authenticated_users.sql` creates the user and webhook-event tables, stores the optional Clerk username, backfills historical UUIDs as `LEGACY_GUEST`, and adds user foreign keys. It also keeps the prior Prisma compatibility views writable during the rollback window.
 
 Use a Preview database branch first. After the preview sign-up, login, journaling, whisper, reply, webhook update, and logout flows pass, repeat the migration and environment setup for Production, then promote the verified deployment.
 
@@ -55,6 +57,7 @@ Existing archives under the old unscoped browser key are intentionally not attac
 
 - Signed-out visitors can view the landing page and resonance pool, but cannot open the inbox or call protected AI and messaging APIs.
 - Google sign-up creates one Clerk user and one `users` row with `account_type = 'REGISTERED'`.
+- Setting or changing a Clerk username is reflected in `users.username`; users without one remain valid.
 - A signed-in journal entry can create an echo associated with the internal PostgreSQL user ID.
 - A whisper derives its receiver from the echo author; request bodies containing participant IDs are rejected.
 - Only conversation participants can list, open, or reply to a conversation.
