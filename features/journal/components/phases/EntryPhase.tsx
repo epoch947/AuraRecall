@@ -27,7 +27,7 @@ export default function EntryPhase() {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="relative w-full h-full flex flex-col items-center justify-center"
+      className="relative h-full w-full overflow-hidden"
     >
       {/* Dev data injector — development only */}
       {process.env.NODE_ENV === 'development' && (
@@ -55,89 +55,101 @@ export default function EntryPhase() {
       {/* Gradient veil for legibility */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50" />
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-8">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
-          className="font-serif text-4xl md:text-5xl text-oatmeal tracking-widest leading-relaxed"
+      {/* Scrollable foreground keeps the cinematic background fixed on compact screens. */}
+      <div className="relative z-10 h-full touch-pan-y overflow-y-auto overscroll-y-contain">
+        <div
+          className="relative flex min-h-full flex-col px-4
+                     pb-[calc(1.5rem+env(safe-area-inset-bottom))]
+                     pt-[calc(4.5rem+env(safe-area-inset-top))]
+                     sm:px-0 sm:py-0"
         >
-          Listen to your inner pulse
-        </motion.h1>
+          {/* Content */}
+          <div className="flex flex-1 items-center justify-center py-10">
+            <div className="flex flex-col items-center gap-6 px-4 text-center sm:px-8">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
+                className="font-serif text-4xl md:text-5xl text-oatmeal tracking-widest leading-relaxed"
+              >
+                Listen to your inner pulse
+              </motion.h1>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          transition={{ delay: 1.4, duration: 0.7 }}
-          className="font-mono text-xs text-linen tracking-[0.35em] uppercase"
-        >
-          AuraRecall · a moment of clarity
-        </motion.p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.7 }}
+                transition={{ delay: 1.4, duration: 0.7 }}
+                className="font-mono text-xs text-linen tracking-[0.35em] uppercase"
+              >
+                AuraRecall · a moment of clarity
+              </motion.p>
 
-        {/* Begin button with glow */}
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 2.0, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          whileHover={{
-            scale: 1.05,
-            boxShadow: '0 0 40px rgba(230,228,224,0.5)',
-          }}
-          whileTap={{ scale: 0.97 }}
-          onClick={beginRitual}
-          disabled={!isLoaded}
-          className="mt-4 px-12 py-3.5 border border-linen/60 text-linen font-mono
-                     text-sm tracking-[0.3em] uppercase
-                     hover:bg-linen/10 transition-colors duration-300
-                     shadow-[0_0_20px_rgba(230,228,224,0.2)]"
-        >
-          {isSignedIn ? (zenCompleted ? 'Resume' : 'Begin') : 'Sign in to begin'}
-        </motion.button>
+              {/* Begin button with glow */}
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 2.0, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: '0 0 40px rgba(230,228,224,0.5)',
+                }}
+                whileTap={{ scale: 0.97 }}
+                onClick={beginRitual}
+                disabled={!isLoaded}
+                className="mt-4 px-12 py-3.5 border border-linen/60 text-linen font-mono
+                           text-sm tracking-[0.3em] uppercase
+                           hover:bg-linen/10 transition-colors duration-300
+                           shadow-[0_0_20px_rgba(230,228,224,0.2)]"
+              >
+                {isSignedIn ? (zenCompleted ? 'Resume' : 'Begin') : 'Sign in to begin'}
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Bottom navigation — in normal flow on mobile, overlaid on larger screens. */}
+          <motion.nav
+            aria-label="Primary"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 3.0, duration: 0.8 }}
+            className="flex w-full shrink-0 flex-wrap items-center justify-center gap-x-5 gap-y-3 px-2
+                       sm:absolute sm:bottom-10 sm:left-1/2 sm:w-auto sm:-translate-x-1/2
+                       sm:flex-nowrap sm:gap-8 sm:px-0"
+          >
+            <Link
+              href="/resonance"
+              className="flex items-center gap-2 font-mono text-[10px]
+                         text-oatmeal/40 hover:text-oatmeal/80
+                         tracking-[0.35em] uppercase transition-colors duration-500"
+            >
+              <Waves size={11} strokeWidth={1.5} />
+              Resonance Pool
+            </Link>
+
+            <button
+              type="button"
+              onClick={viewArchive}
+              className="flex items-center gap-2 font-mono text-[10px]
+                         text-oatmeal/40 hover:text-oatmeal/80
+                         tracking-[0.35em] uppercase transition-colors duration-500"
+            >
+              <Archive size={11} strokeWidth={1.5} />
+              Memory Archive
+            </button>
+
+            <Link
+              href="/inbox"
+              className="flex items-center gap-2 font-mono text-[10px]
+                         text-oatmeal/40 hover:text-oatmeal/80
+                         tracking-[0.35em] uppercase transition-colors duration-500"
+            >
+              <Mail size={11} strokeWidth={1.5} />
+              Inbox
+            </Link>
+          </motion.nav>
+        </div>
       </div>
-
-      {/* Bottom navigation — ghost links, delayed appearance */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 3.0, duration: 0.8 }}
-        className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2
-                   flex w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap items-center
-                   justify-center gap-x-5 gap-y-3 px-2 sm:bottom-10 sm:w-auto
-                   sm:flex-nowrap sm:gap-8 sm:px-0"
-      >
-        <Link
-          href="/resonance"
-          className="flex items-center gap-2 font-mono text-[10px]
-                     text-oatmeal/40 hover:text-oatmeal/80
-                     tracking-[0.35em] uppercase transition-colors duration-500"
-        >
-          <Waves size={11} strokeWidth={1.5} />
-          Resonance Pool
-        </Link>
-
-        <button
-          type="button"
-          onClick={viewArchive}
-          className="flex items-center gap-2 font-mono text-[10px]
-                     text-oatmeal/40 hover:text-oatmeal/80
-                     tracking-[0.35em] uppercase transition-colors duration-500"
-        >
-          <Archive size={11} strokeWidth={1.5} />
-          Memory Archive
-        </button>
-
-        <Link
-          href="/inbox"
-          className="flex items-center gap-2 font-mono text-[10px]
-                     text-oatmeal/40 hover:text-oatmeal/80
-                     tracking-[0.35em] uppercase transition-colors duration-500"
-        >
-          <Mail size={11} strokeWidth={1.5} />
-          Inbox
-        </Link>
-      </motion.div>
     </motion.div>
   )
 }
