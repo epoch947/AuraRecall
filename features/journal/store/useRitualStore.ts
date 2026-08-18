@@ -24,6 +24,8 @@ interface RitualState {
   setWeatherData: (data: WeatherData | null) => void
   setEchoData: (data: EchoData) => void
   markZenCompleted: () => void
+  leaveRitual: () => void
+  returnToWriting: () => void
   resetRitual: () => void
   saveAndReset: () => void
   viewArchive: () => void
@@ -55,6 +57,8 @@ export const useRitualStore = create<RitualState>()(
       setWeatherData: (weatherData) => set({ weatherData }),
       setEchoData: (echoData) => set({ echoData }),
       markZenCompleted: () => set({ zenCompleted: true }),
+      leaveRitual: () => set({ phase: 'ENTRY' }),
+      returnToWriting: () => set({ phase: 'SAMPLING', echoData: null }),
       resetRitual: () => set(initialState),
 
       viewArchive: () => set({ phase: 'ARCHIVE_GALLERY' }),

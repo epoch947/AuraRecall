@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Mic } from 'lucide-react'
+import { Mic } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import type { PoolEcho } from '@/features/resonance/contracts'
+import BackControl from '@/features/navigation/components/BackControl'
 
 interface WhisperState {
   echoId: string
@@ -49,17 +50,10 @@ export default function ResonancePageClient({
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <div
-        className="sticky top-0 z-20 bg-oatmeal/90 backdrop-blur-sm border-b border-sage/15
-                      px-8 py-5 flex items-center gap-6"
+        className="sticky top-0 z-20 flex items-center gap-4 border-b border-sage/15
+                   bg-oatmeal/90 py-5 pl-5 pr-16 backdrop-blur-sm sm:gap-6 sm:pl-8 sm:pr-24"
       >
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-mono text-[10px] text-charcoal/40
-                     hover:text-charcoal tracking-[0.25em] uppercase transition-colors duration-300"
-        >
-          <ArrowLeft size={12} strokeWidth={1.5} />
-          Return
-        </Link>
+        <BackControl href="/" label="Home" className="-ml-3" />
         <p className="font-mono text-[10px] text-charcoal/30 tracking-[0.35em] uppercase">
           Resonance Pool
         </p>

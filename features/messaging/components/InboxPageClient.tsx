@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import type {
   ConversationDetail,
   ConversationSummary,
   MessageRecord,
 } from '@/features/messaging/contracts'
+import BackControl from '@/features/navigation/components/BackControl'
 
 // ─── Conversation list item ─────────────────────────────────────────────────
 
@@ -90,15 +90,7 @@ function ChatView({ conv, onBack }: { conv: ConversationDetail; onBack: () => vo
     <div className="flex flex-col h-screen bg-charcoal">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-oatmeal/8 px-8 py-5 flex items-center gap-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-2 font-mono text-[10px] text-oatmeal/30
-                     hover:text-oatmeal/70 tracking-[0.25em] uppercase transition-colors duration-200"
-        >
-          <ArrowLeft size={12} strokeWidth={1.5} />
-          Back
-        </button>
+        <BackControl onClick={onBack} label="Back to inbox" tone="on-dark" />
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: conv.echo.color }} />
           <p className="font-serif text-sm text-oatmeal/40 italic truncate max-w-xs">
@@ -234,20 +226,19 @@ export default function InboxPageClient() {
         >
           {/* Header */}
           <div
-            className="sticky top-0 z-20 bg-charcoal/90 backdrop-blur-sm border-b border-oatmeal/8
-                          px-8 py-5 flex items-center gap-6"
+            className="sticky top-0 z-20 flex items-center gap-4 border-b border-oatmeal/8
+                       bg-charcoal/90 py-5 pl-5 pr-16 backdrop-blur-sm sm:gap-6 sm:pl-8 sm:pr-24"
           >
-            <Link
-              href="/resonance"
-              className="flex items-center gap-2 font-mono text-[10px] text-oatmeal/30
-                         hover:text-oatmeal/70 tracking-[0.25em] uppercase transition-colors duration-200"
-            >
-              <ArrowLeft size={12} strokeWidth={1.5} />
-              Pool
-            </Link>
+            <BackControl href="/" label="Home" tone="on-dark" className="-ml-3" />
             <p className="font-mono text-[10px] text-oatmeal/20 tracking-[0.35em] uppercase">
               Inbox
             </p>
+            <Link
+              href="/resonance"
+              className="ml-auto font-mono text-[10px] uppercase tracking-[0.25em] text-oatmeal/30 transition-colors hover:text-oatmeal/70"
+            >
+              Pool
+            </Link>
           </div>
 
           {/* Conversation list */}

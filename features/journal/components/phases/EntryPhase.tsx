@@ -8,7 +8,7 @@ import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
 
 export default function EntryPhase() {
-  const { advanceTo, viewArchive, injectDummyData } = useRitualStore()
+  const { advanceTo, viewArchive, injectDummyData, zenCompleted } = useRitualStore()
   const { isLoaded, isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
 
@@ -18,7 +18,7 @@ export default function EntryPhase() {
       openSignIn()
       return
     }
-    advanceTo('ZEN_TIMER')
+    advanceTo(zenCompleted ? 'SAMPLING' : 'ZEN_TIMER')
   }
 
   return (
@@ -93,7 +93,7 @@ export default function EntryPhase() {
                      hover:bg-linen/10 transition-colors duration-300
                      shadow-[0_0_20px_rgba(230,228,224,0.2)]"
         >
-          {isSignedIn ? 'Begin' : 'Sign in to begin'}
+          {isSignedIn ? (zenCompleted ? 'Resume' : 'Begin') : 'Sign in to begin'}
         </motion.button>
       </div>
 

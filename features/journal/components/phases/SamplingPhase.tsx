@@ -10,6 +10,7 @@ import { useCurrentWeather } from '@/features/journal/hooks/useCurrentWeather'
 import { extractMoodColor } from '@/features/journal/lib/semanticColor'
 import { formatWeatherLabel } from '@/features/journal/lib/weather'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
+import BackControl from '@/features/navigation/components/BackControl'
 
 // ─── Echo Whisper helpers ─────────────────────────────────────────────────────
 
@@ -49,8 +50,16 @@ function findEchoMatch(currentColor: string, echoes: EchoRecord[]): EchoRecord |
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SamplingPhase() {
-  const { advanceTo, moodText, setMoodText, moodColor, setMoodColor, resetRitual, pastEchoes } =
-    useRitualStore()
+  const {
+    advanceTo,
+    moodText,
+    setMoodText,
+    moodColor,
+    setMoodColor,
+    leaveRitual,
+    resetRitual,
+    pastEchoes,
+  } = useRitualStore()
 
   const { weatherData, status, message, requestWeather, removeWeather, isLoading } =
     useCurrentWeather()
@@ -102,6 +111,13 @@ export default function SamplingPhase() {
       className="relative w-full h-full flex flex-col items-center justify-center"
       style={{ backgroundColor: moodColor, transition: 'background-color 3000ms ease-in-out' }}
     >
+      <BackControl
+        onClick={leaveRitual}
+        label="Leave ritual"
+        compactOnMobile
+        className="absolute left-4 top-4 z-30 sm:left-6 sm:top-5"
+      />
+
       {/* Echo Whisper — ghost from the past */}
       <AnimatePresence>
         {echoMatch && !isDissolving && (

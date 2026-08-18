@@ -10,6 +10,7 @@ import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { useTypewriter } from '@/features/journal/hooks/useTypewriter'
 import { formatWeatherContext } from '@/features/journal/lib/weather'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
+import BackControl from '@/features/navigation/components/BackControl'
 
 const LOADING_MESSAGES = [
   'Distilling the shape of your day…',
@@ -21,7 +22,8 @@ const LOADING_MESSAGES = [
 const GENERATION_ERROR_MESSAGE = 'We could not create your visual echo right now. Please try again.'
 
 export default function VizLabPhase() {
-  const { advanceTo, moodText, weatherData, setEchoData, setMoodColor } = useRitualStore()
+  const { advanceTo, moodText, weatherData, setEchoData, setMoodColor, returnToWriting } =
+    useRitualStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasRequested = useRef(false)
   const [videoEnded, setVideoEnded] = useState(false)
@@ -191,13 +193,12 @@ export default function VizLabPhase() {
               >
                 Try Again
               </button>
-              <button
-                type="button"
-                onClick={() => advanceTo('ENTRY')}
-                className="px-7 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-oatmeal/55 transition-colors hover:text-oatmeal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/70"
-              >
-                Return to Journal
-              </button>
+              <BackControl
+                onClick={returnToWriting}
+                label="Back to writing"
+                tone="on-dark"
+                className="px-7"
+              />
             </div>
           </motion.div>
         )}

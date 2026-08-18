@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
+import BackControl from '@/features/navigation/components/BackControl'
 
 export default function ZenTimerPhase() {
-  const { advanceTo, markZenCompleted } = useRitualStore()
+  const { advanceTo, markZenCompleted, leaveRitual } = useRitualStore()
   const [seconds, setSeconds] = useState(60)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -44,6 +45,14 @@ export default function ZenTimerPhase() {
       exit="exit"
       className="relative w-full h-full flex flex-col items-center justify-center bg-charcoal"
     >
+      <BackControl
+        onClick={leaveRitual}
+        label="Leave ritual"
+        tone="on-dark"
+        compactOnMobile
+        className="absolute left-4 top-4 z-30 sm:left-6 sm:top-5"
+      />
+
       {/* Centered video card */}
       <div className="relative w-[min(380px,80vw)] rounded-2xl overflow-hidden shadow-2xl aspect-[9/16]">
         <video

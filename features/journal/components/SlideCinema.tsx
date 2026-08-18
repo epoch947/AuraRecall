@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
-import { Download, Check, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, Check, Volume2, VolumeX } from 'lucide-react'
 import { useSonicLandscape } from '@/features/journal/hooks/useSonicLandscape'
+import BackControl from '@/features/navigation/components/BackControl'
 
 // ─── Data contract ────────────────────────────────────────────────────────────
 
@@ -310,7 +311,7 @@ function Slide3({ echoData, onReset }: { echoData: EchoData; onReset?: () => voi
               hasGeneratedImage ? 'text-oatmeal' : 'text-charcoal'
             }`}
           >
-            Close &amp; Return
+            Finish &amp; Return
           </button>
         </div>
       )}
@@ -335,6 +336,7 @@ export default function SlideCinema({
   const [isPaused, setIsPaused] = useState(false)
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
   const [isMuted, setIsMuted] = useState(false)
+  const isLightSlide = currentSlide === 2
 
   // Ambient audio — active for the full Cinema phase
   useSonicLandscape(true, echoData.semanticColor, echoData.weather)
@@ -370,8 +372,30 @@ export default function SlideCinema({
     }
   }, [currentSlide])
 
+  useEffect(() => {
+    function navigateSlides(event: KeyboardEvent) {
+      if (event.key === 'ArrowLeft') goPrev()
+      if (event.key === 'ArrowRight') goNext()
+    }
+
+    window.addEventListener('keydown', navigateSlides)
+    return () => window.removeEventListener('keydown', navigateSlides)
+  }, [goNext, goPrev])
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-charcoal select-none">
+      {onReset ? (
+        <div data-html-to-image-ignore="true" className="absolute left-4 top-6 z-[60] sm:left-6">
+          <BackControl
+            onClick={onReset}
+            label="Close and save"
+            tone={isLightSlide ? 'on-light' : 'on-dark'}
+            icon="close"
+            compactOnMobile
+          />
+        </div>
+      ) : null}
+
       {/* ── Mute toggle (excluded from PNG) ── */}
       <div data-html-to-image-ignore="true" className="absolute bottom-6 right-6 z-50">
         <button
@@ -394,7 +418,6 @@ export default function SlideCinema({
       >
         {[0, 1, 2].map((i) => {
           // Mix-based color: works on both dark (Slides 0-1) and light (Slide 2)
-          const isLightSlide = currentSlide === 2
           const trackColor = isLightSlide ? 'rgba(51,51,51,0.18)' : 'rgba(245,240,232,0.3)'
           const fillColor = isLightSlide ? 'rgba(51,51,51,0.55)' : 'rgba(245,240,232,0.9)'
 
@@ -439,6 +462,34 @@ export default function SlideCinema({
           {currentSlide === 2 && <Slide3 echoData={echoData} onReset={onReset} />}
         </motion.div>
       </AnimatePresence>
+
+      {currentSlide > 0 ? (
+        <button
+          type="button"
+          data-html-to-image-ignore="true"
+          onClick={goPrev}
+          aria-label="Previous slide"
+          className={`absolute left-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur-sm transition-colors focus-visible:outline-none focus-visible:ring-2 sm:left-5 ${
+            isLightSlide
+              ? 'bg-charcoal/5 text-charcoal/45 hover:bg-charcoal/10 hover:text-charcoal focus-visible:ring-sage/60'
+              : 'bg-black/15 text-oatmeal/45 hover:bg-black/30 hover:text-oatmeal focus-visible:ring-sage/70'
+          }`}
+        >
+          <ArrowLeft size={17} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
+
+      {currentSlide < 2 ? (
+        <button
+          type="button"
+          data-html-to-image-ignore="true"
+          onClick={goNext}
+          aria-label="Next slide"
+          className="absolute right-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/15 text-oatmeal/45 backdrop-blur-sm transition-colors hover:bg-black/30 hover:text-oatmeal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/70 sm:right-5"
+        >
+          <ArrowRight size={17} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
 
       {/* ── Navigation zones (invisible tap targets) ── */}
 
