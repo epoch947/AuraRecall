@@ -14,6 +14,19 @@ export const generatedEchoSchema = z.object({
   keyword: z.string().trim().min(1).max(80),
 })
 
+export const echoGenerationResponseSchema = z.object({
+  imageUrl: z.string().min(1).nullable(),
+  insight: z.string().trim().min(1).max(500),
+  semanticColor: semanticColorSchema.nullable(),
+})
+
+export const echoGenerationErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.literal('AI_GENERATION_UNAVAILABLE'),
+    message: z.string().trim().min(1).max(300),
+  }),
+})
+
 export const echoSummarySchema = z.object({
   text: z.string().trim().min(1).max(5000),
   color: z.string().trim().min(1).max(100),
@@ -42,6 +55,7 @@ export interface WeatherData {
 export interface EchoData {
   imageUrl: string | null
   insight: string
+  semanticColor?: string | null
 }
 
 export interface EchoRecord {
@@ -56,5 +70,7 @@ export interface EchoRecord {
 
 export type GenerateEchoRequest = z.infer<typeof generateEchoRequestSchema>
 export type GeneratedEcho = z.infer<typeof generatedEchoSchema>
+export type EchoGenerationResponse = z.infer<typeof echoGenerationResponseSchema>
+export type EchoGenerationErrorResponse = z.infer<typeof echoGenerationErrorResponseSchema>
 export type EchoSummary = z.infer<typeof echoSummarySchema>
 export type Pattern = z.infer<typeof patternSchema>

@@ -1,7 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+  echoGenerationErrorResponseSchema,
+  echoGenerationResponseSchema,
+} from '@/features/journal/contracts'
 import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { useTypewriter } from '@/features/journal/hooks/useTypewriter'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
@@ -13,11 +17,15 @@ const LOADING_MESSAGES = [
   'Translating signals into imagery…',
 ]
 
+const GENERATION_ERROR_MESSAGE = 'We could not create your visual echo right now. Please try again.'
+
 export default function VizLabPhase() {
   const { advanceTo, moodText, weatherData, setEchoData, setMoodColor } = useRitualStore()
   const videoRef = useRef<HTMLVideoElement>(null)
+  const hasRequested = useRef(false)
   const [videoEnded, setVideoEnded] = useState(false)
-  const [apiReady, setApiReady] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [errorMessage, setErrorMessage] = useState('')
   const [msgIndex, setMsgIndex] = useState(0)
   const hasAdvanced = useRef(false)
 
@@ -30,38 +38,58 @@ export default function VizLabPhase() {
     return () => clearInterval(timer)
   }, [videoEnded])
 
-  // Fire API call immediately on mount (parallel with video)
+  const requestEcho = useCallback(async () => {
+    setGenerationStatus('loading')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch('/api/generate-echo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moodText,
+          weather: weatherData?.description ?? 'Unknown Skies',
+          isPublic: true,
+        }),
+      })
+      const payload: unknown = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const parsedError = echoGenerationErrorResponseSchema.safeParse(payload)
+        throw new Error(
+          parsedError.success ? parsedError.data.error.message : GENERATION_ERROR_MESSAGE,
+        )
+      }
+
+      const parsedEcho = echoGenerationResponseSchema.safeParse(payload)
+      if (!parsedEcho.success) {
+        throw new Error('The generated echo was incomplete. Please try again.')
+      }
+
+      if (parsedEcho.data.semanticColor) setMoodColor(parsedEcho.data.semanticColor)
+      setEchoData(parsedEcho.data)
+      setGenerationStatus('ready')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : GENERATION_ERROR_MESSAGE)
+      setGenerationStatus('error')
+    }
+  }, [moodText, setEchoData, setMoodColor, weatherData])
+
+  // Fire the request immediately on mount so it runs in parallel with the video.
   useEffect(() => {
-    fetch('/api/generate-echo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        moodText,
-        weather: weatherData?.description ?? 'Unknown Skies',
-        isPublic: true,
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.semanticColor) setMoodColor(data.semanticColor)
-        setEchoData(data)
-        setApiReady(true)
-      })
-      .catch(() => {
-        setEchoData({ imageUrl: null, insight: 'Your moment is held in stillness.' })
-        setApiReady(true)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (hasRequested.current) return
+    hasRequested.current = true
+    void requestEcho()
+  }, [requestEcho])
 
   // Advance when BOTH video ended AND API ready
   useEffect(() => {
-    if (videoEnded && apiReady && !hasAdvanced.current) {
+    if (videoEnded && generationStatus === 'ready' && !hasAdvanced.current) {
       hasAdvanced.current = true
       const timer = setTimeout(() => advanceTo('CINEMA'), 700)
       return () => clearTimeout(timer)
     }
-  }, [videoEnded, apiReady, advanceTo])
+  }, [videoEnded, generationStatus, advanceTo])
 
   const loadingText = useTypewriter(LOADING_MESSAGES[msgIndex], 35, videoEnded)
 
@@ -89,6 +117,7 @@ export default function VizLabPhase() {
               muted
               playsInline
               onEnded={() => setVideoEnded(true)}
+              onError={() => setVideoEnded(true)}
               className="w-full h-full object-cover"
             />
           </motion.div>
@@ -97,7 +126,7 @@ export default function VizLabPhase() {
 
       {/* Loading animation — appears after video ends */}
       <AnimatePresence>
-        {videoEnded && (
+        {videoEnded && generationStatus !== 'error' && (
           <motion.div
             key="viz-loading"
             initial={{ opacity: 0 }}
@@ -130,6 +159,45 @@ export default function VizLabPhase() {
             <p className="font-mono text-sm text-sage/70 tracking-wide typewriter-cursor min-h-[1.5em] text-center px-8">
               {loadingText}
             </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {videoEnded && generationStatus === 'error' && (
+          <motion.div
+            key="viz-error"
+            role="alert"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.45 }}
+            className="relative z-10 flex max-w-md flex-col items-center px-8 text-center"
+          >
+            <div className="mb-8 h-px w-16 bg-sage/45" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-sage/55">
+              Generation paused
+            </p>
+            <h2 className="mt-5 font-serif text-3xl text-oatmeal">Your journal is still here.</h2>
+            <p className="mt-5 font-serif text-base leading-relaxed text-oatmeal/65">
+              {errorMessage}
+            </p>
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void requestEcho()}
+                className="border border-sage/55 px-7 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-oatmeal transition-colors hover:bg-sage/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/70"
+              >
+                Try Again
+              </button>
+              <button
+                type="button"
+                onClick={() => advanceTo('ENTRY')}
+                className="px-7 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-oatmeal/55 transition-colors hover:text-oatmeal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/70"
+              >
+                Return to Journal
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

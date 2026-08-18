@@ -39,7 +39,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('[generate-echo] OpenAI call failed:', error)
-    return NextResponse.json(createMockEcho())
+    console.error('[generate-echo] AI generation failed:', error)
+    return NextResponse.json(
+      {
+        error: {
+          code: 'AI_GENERATION_UNAVAILABLE',
+          message: 'We could not create your visual echo right now. Please try again.',
+        },
+      },
+      { status: 503 },
+    )
   }
 }

@@ -46,25 +46,23 @@ export async function generateEcho(
     JSON.parse(completion.choices[0].message.content ?? '{}'),
   )
 
-  let imageUrl: string | null = null
-  try {
-    const imagePrompt =
-      `A wide cinematic landscape representing the feeling of ${generated.keyword}. ` +
-      `The dominant color scheme must be ${generated.semanticColor} tones with soft, misty lighting. ` +
-      'Minimalist composition, deep depth of field, Wabi-sabi aesthetic, 2700K warm glow, ' +
-      'high-end fine art photography. No text. No people. No logos.'
+  const imagePrompt =
+    `A wide cinematic landscape representing the feeling of ${generated.keyword}. ` +
+    `The dominant color scheme must be ${generated.semanticColor} tones with soft, misty lighting. ` +
+    'Minimalist composition, deep depth of field, Wabi-sabi aesthetic, 2700K warm glow, ' +
+    'high-end fine art photography. No text. No people. No logos.'
 
-    const image = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: imagePrompt,
-      size: '1792x1024',
-      quality: 'standard',
-      n: 1,
-    })
-    imageUrl = image.data?.[0]?.url ?? null
-  } catch (error) {
-    console.error('[generate-echo] DALL-E 3 failed:', error)
-    imageUrl = '/assets/4_1_runtime_cover_mock.jpg'
+  const image = await openai.images.generate({
+    model: 'dall-e-3',
+    prompt: imagePrompt,
+    size: '1792x1024',
+    quality: 'standard',
+    n: 1,
+  })
+  const imageUrl = image.data?.[0]?.url
+
+  if (!imageUrl) {
+    throw new Error('OpenAI image generation completed without an image URL')
   }
 
   return {

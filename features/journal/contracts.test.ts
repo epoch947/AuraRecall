@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { generateEchoRequestSchema, generatedEchoSchema } from './contracts'
+import {
+  echoGenerationErrorResponseSchema,
+  echoGenerationResponseSchema,
+  generateEchoRequestSchema,
+  generatedEchoSchema,
+} from './contracts'
 
 describe('journal contracts', () => {
   it('accepts a complete echo request', () => {
@@ -30,5 +35,26 @@ describe('journal contracts', () => {
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it('accepts a complete echo generation response', () => {
+    const result = echoGenerationResponseSchema.safeParse({
+      imageUrl: 'https://example.com/generated-image.png',
+      insight: 'What would you like to carry forward from this moment?',
+      semanticColor: '#8A9A7B',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts the safe error returned when generation is unavailable', () => {
+    const result = echoGenerationErrorResponseSchema.safeParse({
+      error: {
+        code: 'AI_GENERATION_UNAVAILABLE',
+        message: 'We could not create your visual echo right now.',
+      },
+    })
+
+    expect(result.success).toBe(true)
   })
 })
