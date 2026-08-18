@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import type { PoolEcho } from '@/features/resonance/contracts'
 import BackControl from '@/features/navigation/components/BackControl'
+import { formatFullUtcDate } from '@/lib/date'
 
 interface WhisperState {
   echoId: string
@@ -101,11 +102,7 @@ export default function ResonancePageClient({
                     {echo.weather}
                   </span>
                   <span className="font-mono text-[9px] text-charcoal/20 tracking-[0.2em]">
-                    {new Date(echo.createdAt).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {formatFullUtcDate(echo.createdAt)}
                   </span>
 
                   {/* Participant identities stay on the server; clients receive capabilities only. */}

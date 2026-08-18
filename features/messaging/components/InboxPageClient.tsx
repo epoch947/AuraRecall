@@ -9,6 +9,7 @@ import type {
   MessageRecord,
 } from '@/features/messaging/contracts'
 import BackControl from '@/features/navigation/components/BackControl'
+import { formatBriefUtcDate } from '@/lib/date'
 
 // ─── Conversation list item ─────────────────────────────────────────────────
 
@@ -39,11 +40,7 @@ function ConversationItem({ conv, onClick }: { conv: ConversationSummary; onClic
           {latest?.content ?? '—'}
         </p>
         <p className="font-mono text-[9px] text-oatmeal/25 tracking-[0.25em] uppercase truncate">
-          {conv.echo.weather} ·{' '}
-          {new Date(conv.updatedAt).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-          })}
+          {conv.echo.weather} · {formatBriefUtcDate(conv.updatedAt)}
         </p>
       </div>
       {pending && <div className="w-1.5 h-1.5 rounded-full bg-oatmeal/40 flex-shrink-0 mt-2" />}
