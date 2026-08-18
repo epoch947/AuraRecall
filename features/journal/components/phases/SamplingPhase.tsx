@@ -141,7 +141,7 @@ export default function SamplingPhase() {
       {/* User-controlled local weather */}
       <div
         aria-live="polite"
-        className="absolute top-6 right-6 z-20 flex max-w-[min(340px,calc(100vw-3rem))] flex-col items-end gap-2"
+        className="absolute top-6 right-16 z-20 flex max-w-[min(340px,calc(100vw-5rem))] flex-col items-end gap-2 sm:right-20"
       >
         <AnimatePresence mode="wait">
           {isLoading ? (
