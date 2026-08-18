@@ -102,7 +102,10 @@ export default function EntryPhase() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 3.0, duration: 0.8 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8"
+        className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2
+                   flex w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap items-center
+                   justify-center gap-x-5 gap-y-3 px-2 sm:bottom-10 sm:w-auto
+                   sm:flex-nowrap sm:gap-8 sm:px-0"
       >
         <Link
           href="/resonance"
