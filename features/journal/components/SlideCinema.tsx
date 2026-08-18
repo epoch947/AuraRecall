@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
-import { Download, Check, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, Check, Volume2, VolumeX } from 'lucide-react'
 import { useSonicLandscape } from '@/features/journal/hooks/useSonicLandscape'
+import BackControl from '@/features/navigation/components/BackControl'
 
 // ─── Data contract ────────────────────────────────────────────────────────────
 
@@ -158,16 +159,19 @@ function Slide3({ echoData, onReset }: { echoData: EchoData; onReset?: () => voi
   const posterRef = useRef<HTMLDivElement>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [saved, setSaved] = useState(false)
+  const hasGeneratedImage = Boolean(echoData.imageUrl)
 
   const handleExport = async () => {
     if (!posterRef.current || isCapturing || saved) return
     setIsCapturing(true)
     try {
-      await new Promise((r) => setTimeout(r, 60))
+      const posterImages = Array.from(posterRef.current.querySelectorAll('img'))
+      await Promise.all(posterImages.map((image) => image.decode().catch(() => undefined)))
       const { toPng } = await import('html-to-image')
       const dataUrl = await toPng(posterRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        backgroundColor: hasGeneratedImage ? '#2a2a2a' : '#f1eadf',
       })
       const link = document.createElement('a')
       link.download = 'AuraRecall_Echo.png'
@@ -184,63 +188,107 @@ function Slide3({ echoData, onReset }: { echoData: EchoData; onReset?: () => voi
   }
 
   return (
-    <div
-      ref={posterRef}
-      className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-oatmeal"
-    >
-      {/* ── Layer 1: Enso circle watermark — single centered instance ── */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="relative w-80 h-80">
-          <Image
-            src="/assets/3_3.png"
-            alt=""
-            fill
-            className="object-contain"
-            style={{ opacity: 0.2, mixBlendMode: 'multiply' }}
+    <div className="relative h-full w-full overflow-hidden bg-oatmeal">
+      <div
+        ref={posterRef}
+        className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-oatmeal"
+      >
+        {/* ── Layer 1: generated visual or semantic fallback ── */}
+        {echoData.imageUrl ? (
+          <Image src={echoData.imageUrl} alt="" fill unoptimized className="object-cover" />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse at 50% 40%, ${echoData.semanticColor} 0%, hsl(43,20%,82%) 58%, #2a2a2a 130%)`,
+            }}
           />
+        )}
+
+        {hasGeneratedImage && (
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/45 to-black/70" />
+        )}
+
+        {/* ── Layer 2: Enso circle watermark ── */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="relative w-80 h-80">
+            <Image
+              src="/assets/3_3.png"
+              alt=""
+              fill
+              className="object-contain"
+              style={{
+                opacity: hasGeneratedImage ? 0.12 : 0.2,
+                mixBlendMode: hasGeneratedImage ? 'screen' : 'multiply',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ── Layer 3: Poster content ── */}
+        <div
+          className="relative z-10 flex flex-col items-center gap-6 mx-auto
+                   w-[min(600px,90vw)] px-14 py-12 min-h-[420px]"
+        >
+          <p
+            className={`font-mono text-sm tracking-[0.2em] uppercase ${
+              hasGeneratedImage ? 'text-oatmeal/75' : 'text-sage'
+            }`}
+          >
+            {echoData.date}
+          </p>
+
+          <div
+            className={`w-full border-t ${
+              hasGeneratedImage ? 'border-oatmeal/30' : 'border-sage/30'
+            }`}
+          />
+
+          <p
+            className={`font-serif text-xl leading-relaxed text-center drop-shadow-sm ${
+              hasGeneratedImage ? 'text-oatmeal' : 'text-charcoal/85'
+            }`}
+          >
+            {echoData.originalText || '—'}
+          </p>
+
+          <div
+            className={`w-full border-b ${
+              hasGeneratedImage ? 'border-oatmeal/30' : 'border-sage/30'
+            }`}
+          />
+
+          <p
+            className={`font-mono text-[9px] tracking-widest uppercase ${
+              hasGeneratedImage ? 'text-oatmeal/45' : 'text-charcoal/20'
+            }`}
+          >
+            AtomByte LLC · AuraRecall
+          </p>
         </div>
       </div>
 
-      {/* ── Layer 2: Poster content ── */}
-      <div
-        className="relative z-10 flex flex-col items-center gap-6 mx-auto
-                   w-[min(600px,90vw)] px-14 py-12 min-h-[420px]"
-      >
-        {/* Date — mono, sage, uppercase, generous tracking */}
-        <p className="font-mono text-sm text-sage tracking-[0.2em] uppercase">{echoData.date}</p>
-
-        <div className="w-full border-t border-sage/30" />
-
-        {/* Original text — serif, charcoal, leading-relaxed */}
-        <p className="font-serif text-xl text-charcoal/85 leading-relaxed text-center">
-          {echoData.originalText || '—'}
-        </p>
-
-        <div className="w-full border-b border-sage/30" />
-
-        {/* Branding */}
-        <p className="font-mono text-[9px] text-charcoal/20 tracking-widest uppercase">
-          AtomByte LLC · AuraRecall
-        </p>
-      </div>
-
-      {/* ── Layer 3: Export button + Close & Return — hidden during capture ── */}
+      {/* Controls sit outside posterRef so they never appear in the exported PNG. */}
       {!isCapturing && (
-        <div className="relative z-10 mt-12 flex flex-col items-center gap-5">
+        <div className="absolute bottom-12 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-5">
           {/* Save Memory button — three states */}
           <motion.button
             whileHover={!saved && !isCapturing ? { scale: 1.03 } : {}}
             whileTap={!saved && !isCapturing ? { scale: 0.97 } : {}}
             onClick={handleExport}
             disabled={isCapturing || saved}
-            className={`flex items-center gap-2.5 px-8 py-3 border font-mono text-xs
+            className={`flex items-center gap-2.5 px-8 py-3 border font-mono text-xs backdrop-blur-sm
                       tracking-[0.22em] uppercase transition-all duration-300
                       ${
                         saved
-                          ? 'border-charcoal/60 text-charcoal/80 cursor-default'
+                          ? hasGeneratedImage
+                            ? 'border-oatmeal/60 bg-black/20 text-oatmeal cursor-default'
+                            : 'border-charcoal/60 text-charcoal/80 cursor-default'
                           : isCapturing
-                            ? 'border-charcoal/25 text-charcoal/50 cursor-wait'
-                            : 'border-charcoal/35 text-charcoal hover:bg-charcoal hover:text-oatmeal'
+                            ? 'border-oatmeal/25 text-oatmeal/50 cursor-wait'
+                            : hasGeneratedImage
+                              ? 'border-oatmeal/45 bg-black/20 text-oatmeal hover:bg-oatmeal hover:text-charcoal'
+                              : 'border-charcoal/35 text-charcoal hover:bg-charcoal hover:text-oatmeal'
                       }`}
             style={{
               boxShadow: saved ? `0 0 20px ${echoData.semanticColor}99` : 'none',
@@ -259,10 +307,11 @@ function Slide3({ echoData, onReset }: { echoData: EchoData; onReset?: () => voi
           {/* Close & Return — subtle escape hatch */}
           <button
             onClick={() => onReset?.()}
-            className="font-mono text-[10px] text-charcoal uppercase tracking-widest
-                     opacity-30 hover:opacity-60 transition-opacity duration-300"
+            className={`font-mono text-[10px] uppercase tracking-widest opacity-45 transition-opacity duration-300 hover:opacity-80 ${
+              hasGeneratedImage ? 'text-oatmeal' : 'text-charcoal'
+            }`}
           >
-            Close &amp; Return
+            Finish &amp; Return
           </button>
         </div>
       )}
@@ -287,6 +336,7 @@ export default function SlideCinema({
   const [isPaused, setIsPaused] = useState(false)
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
   const [isMuted, setIsMuted] = useState(false)
+  const isLightSlide = currentSlide === 2
 
   // Ambient audio — active for the full Cinema phase
   useSonicLandscape(true, echoData.semanticColor, echoData.weather)
@@ -322,8 +372,30 @@ export default function SlideCinema({
     }
   }, [currentSlide])
 
+  useEffect(() => {
+    function navigateSlides(event: KeyboardEvent) {
+      if (event.key === 'ArrowLeft') goPrev()
+      if (event.key === 'ArrowRight') goNext()
+    }
+
+    window.addEventListener('keydown', navigateSlides)
+    return () => window.removeEventListener('keydown', navigateSlides)
+  }, [goNext, goPrev])
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-charcoal select-none">
+      {onReset ? (
+        <div data-html-to-image-ignore="true" className="absolute left-4 top-6 z-[60] sm:left-6">
+          <BackControl
+            onClick={onReset}
+            label="Close and save"
+            tone={isLightSlide ? 'on-light' : 'on-dark'}
+            icon="close"
+            compactOnMobile
+          />
+        </div>
+      ) : null}
+
       {/* ── Mute toggle (excluded from PNG) ── */}
       <div data-html-to-image-ignore="true" className="absolute bottom-6 right-6 z-50">
         <button
@@ -346,7 +418,6 @@ export default function SlideCinema({
       >
         {[0, 1, 2].map((i) => {
           // Mix-based color: works on both dark (Slides 0-1) and light (Slide 2)
-          const isLightSlide = currentSlide === 2
           const trackColor = isLightSlide ? 'rgba(51,51,51,0.18)' : 'rgba(245,240,232,0.3)'
           const fillColor = isLightSlide ? 'rgba(51,51,51,0.55)' : 'rgba(245,240,232,0.9)'
 
@@ -391,6 +462,34 @@ export default function SlideCinema({
           {currentSlide === 2 && <Slide3 echoData={echoData} onReset={onReset} />}
         </motion.div>
       </AnimatePresence>
+
+      {currentSlide > 0 ? (
+        <button
+          type="button"
+          data-html-to-image-ignore="true"
+          onClick={goPrev}
+          aria-label="Previous slide"
+          className={`absolute left-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur-sm transition-colors focus-visible:outline-none focus-visible:ring-2 sm:left-5 ${
+            isLightSlide
+              ? 'bg-charcoal/5 text-charcoal/45 hover:bg-charcoal/10 hover:text-charcoal focus-visible:ring-sage/60'
+              : 'bg-black/15 text-oatmeal/45 hover:bg-black/30 hover:text-oatmeal focus-visible:ring-sage/70'
+          }`}
+        >
+          <ArrowLeft size={17} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
+
+      {currentSlide < 2 ? (
+        <button
+          type="button"
+          data-html-to-image-ignore="true"
+          onClick={goNext}
+          aria-label="Next slide"
+          className="absolute right-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/15 text-oatmeal/45 backdrop-blur-sm transition-colors hover:bg-black/30 hover:text-oatmeal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/70 sm:right-5"
+        >
+          <ArrowRight size={17} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
 
       {/* ── Navigation zones (invisible tap targets) ── */}
 

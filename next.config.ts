@@ -1,14 +1,13 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
+  async headers() {
+    return [
       {
-        // DALL-E 3 generated image URLs
-        protocol: 'https',
-        hostname: 'oaidalleapiprodscus.blob.core.windows.net',
+        source: '/(.*)',
+        headers: [{ key: 'Permissions-Policy', value: 'geolocation=(self)' }],
       },
-    ],
+    ]
   },
 }
 

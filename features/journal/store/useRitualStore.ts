@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
+import { isInlineImageDataUrl } from '@/features/journal/lib/imageData'
+import { formatWeatherContext } from '@/features/journal/lib/weather'
 
 export type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
 
@@ -15,19 +17,19 @@ interface RitualState {
   echoData: EchoData | null
   zenCompleted: boolean
   pastEchoes: EchoRecord[]
-  userId: string
 
   advanceTo: (phase: RitualPhase) => void
   setMoodText: (text: string) => void
   setMoodColor: (color: string) => void
-  setWeatherData: (data: WeatherData) => void
+  setWeatherData: (data: WeatherData | null) => void
   setEchoData: (data: EchoData) => void
   markZenCompleted: () => void
+  leaveRitual: () => void
+  returnToWriting: () => void
   resetRitual: () => void
   saveAndReset: () => void
   viewArchive: () => void
   injectDummyData: () => void
-  setUserId: (id: string) => void
 }
 
 const initialState = {
@@ -39,12 +41,15 @@ const initialState = {
   zenCompleted: false,
 }
 
+function journalStorageName(authSubject: string | null): string {
+  return `aura-recall-echoes:${authSubject ?? 'signed-out'}`
+}
+
 export const useRitualStore = create<RitualState>()(
   persist(
     (set) => ({
       ...initialState,
       pastEchoes: [],
-      userId: '',
 
       advanceTo: (phase) => set({ phase }),
       setMoodText: (moodText) => set({ moodText }),
@@ -52,9 +57,10 @@ export const useRitualStore = create<RitualState>()(
       setWeatherData: (weatherData) => set({ weatherData }),
       setEchoData: (echoData) => set({ echoData }),
       markZenCompleted: () => set({ zenCompleted: true }),
+      leaveRitual: () => set({ phase: 'ENTRY' }),
+      returnToWriting: () => set({ phase: 'SAMPLING', echoData: null }),
       resetRitual: () => set(initialState),
 
-      setUserId: (userId) => set({ userId }),
       viewArchive: () => set({ phase: 'ARCHIVE_GALLERY' }),
 
       injectDummyData: () =>
@@ -212,8 +218,10 @@ export const useRitualStore = create<RitualState>()(
                   createdAt: new Date().toISOString(),
                   originalText: state.moodText,
                   semanticColor: state.moodColor,
-                  weather: state.weatherData?.description ?? 'Unknown Skies',
-                  imageUrl: state.echoData.imageUrl,
+                  weather: formatWeatherContext(state.weatherData),
+                  imageUrl: isInlineImageDataUrl(state.echoData.imageUrl)
+                    ? null
+                    : state.echoData.imageUrl,
                   insight: state.echoData.insight,
                 },
               ]
@@ -222,7 +230,7 @@ export const useRitualStore = create<RitualState>()(
         }),
     }),
     {
-      name: 'aura-recall-echoes',
+      name: journalStorageName(null),
       version: 1,
       storage: createJSONStorage(() => localStorage),
       migrate: (persistedState) => persistedState as Pick<RitualState, 'pastEchoes'>,
@@ -230,3 +238,9 @@ export const useRitualStore = create<RitualState>()(
     },
   ),
 )
+
+export async function switchRitualStoreIdentity(authSubject: string | null): Promise<void> {
+  useRitualStore.setState({ ...initialState, pastEchoes: [] })
+  useRitualStore.persist.setOptions({ name: journalStorageName(authSubject) })
+  await useRitualStore.persist.rehydrate()
+}

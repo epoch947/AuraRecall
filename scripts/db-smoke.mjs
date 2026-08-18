@@ -2,6 +2,8 @@ import { createDatabaseClient, describeDatabaseTarget } from './lib/database.mjs
 
 const initiatorId = '5d65ea01-bbb0-4f65-8610-a7488fe2c63a'
 const receiverId = 'aec3ce56-cce0-491c-9c65-9a09325e392b'
+const legacyInitiatorId = '2b0a0e46-b520-4056-b05e-81006b9f21cd'
+const legacyReceiverId = '53708710-eae3-4e86-b912-5f4aa866989b'
 const legacyEchoId = '8d82b196-b9d2-464d-9703-6b748755cf29'
 const legacyConversationId = '9b73de04-8d1e-4409-8e70-99434156a6a3'
 const legacyMessageId = '31b1311c-f52c-4875-b40d-da54330fb114'
@@ -12,6 +14,53 @@ async function main() {
   await client.connect()
   try {
     await client.query('BEGIN')
+
+    await client.query(
+      `
+        INSERT INTO users (
+          id,
+          auth_provider,
+          auth_subject,
+          account_type,
+          email,
+          email_verified_at,
+          username
+        )
+        VALUES
+          ($1::uuid, 'clerk', 'smoke-initiator', 'REGISTERED', 'initiator@smoke.test', now(), 'smoke_initiator'),
+          ($2::uuid, 'clerk', 'smoke-receiver', 'REGISTERED', 'receiver@smoke.test', now(), 'smoke_receiver')
+      `,
+      [initiatorId, receiverId],
+    )
+
+    const syncedUser = await client.query(
+      `
+        SELECT username
+        FROM users
+        WHERE auth_provider = 'clerk' AND auth_subject = 'smoke-initiator'
+      `,
+    )
+    if (syncedUser.rows[0]?.username !== 'smoke_initiator') {
+      throw new Error('Authenticated username persistence failed')
+    }
+
+    await client.query('SAVEPOINT username_uniqueness_check')
+    let duplicateUsernameRejected = false
+    try {
+      await client.query(
+        `
+          INSERT INTO users (auth_provider, auth_subject, account_type, username)
+          VALUES ('clerk', 'smoke-duplicate', 'REGISTERED', 'SMOKE_INITIATOR')
+        `,
+      )
+    } catch (error) {
+      duplicateUsernameRejected = error?.code === '23505'
+      await client.query('ROLLBACK TO SAVEPOINT username_uniqueness_check')
+    }
+    if (!duplicateUsernameRejected) {
+      throw new Error('Case-insensitive username uniqueness check failed')
+    }
+    await client.query('RELEASE SAVEPOINT username_uniqueness_check')
 
     const echo = await client.query(
       `
@@ -80,7 +129,7 @@ async function main() {
         'Cloudy',
         1,
         zeroVector,
-        receiverId,
+        legacyReceiverId,
         '2026-01-01T00:00:00.000Z',
       ],
     )
@@ -101,7 +150,13 @@ async function main() {
         )
         VALUES ($1, $2, $3, $4, 'PENDING', $5::timestamp, $5::timestamp)
       `,
-      [legacyConversationId, legacyEchoId, initiatorId, receiverId, '2026-01-01T00:00:00.000Z'],
+      [
+        legacyConversationId,
+        legacyEchoId,
+        legacyInitiatorId,
+        legacyReceiverId,
+        '2026-01-01T00:00:00.000Z',
+      ],
     )
 
     await client.query(
@@ -118,7 +173,7 @@ async function main() {
       [
         legacyMessageId,
         legacyConversationId,
-        initiatorId,
+        legacyInitiatorId,
         'Legacy compatibility smoke test',
         '2026-01-01T00:00:00.000Z',
       ],
@@ -150,6 +205,18 @@ async function main() {
       compatibility.rows[0]?.messages !== 1
     ) {
       throw new Error('Legacy Prisma compatibility bridge failed')
+    }
+
+    const legacyUsers = await client.query(
+      `
+        SELECT count(*)::int AS count
+        FROM users
+        WHERE id = ANY($1::uuid[]) AND account_type = 'LEGACY_GUEST'
+      `,
+      [[legacyInitiatorId, legacyReceiverId]],
+    )
+    if (legacyUsers.rows[0].count !== 2) {
+      throw new Error('Legacy identity compatibility bridge failed')
     }
 
     await client.query('DELETE FROM "Conversation" WHERE id = $1', [legacyConversationId])

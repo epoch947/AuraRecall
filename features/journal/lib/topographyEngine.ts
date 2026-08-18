@@ -65,12 +65,20 @@ export async function computeTopography(echoes: EchoRecord[]): Promise<Topograph
   const model = new TSNE({ epsilon: 10, perplexity, dim: 2 })
   model.init({ data: features, type: 'dense' })
   model.run()
-  const raw = model.getOutputScaled() // already [0,1] scaled
+  const raw = model.getOutputScaled()
+  const xValues = raw.map(([x]) => x)
+  const yValues = raw.map(([, y]) => y)
+  const minX = Math.min(...xValues)
+  const maxX = Math.max(...xValues)
+  const minY = Math.min(...yValues)
+  const maxY = Math.max(...yValues)
+  const normalize = (value: number, min: number, max: number) =>
+    max === min ? 0.5 : (value - min) / (max - min)
 
   return sorted.map((echo, i) => ({
     id: echo.id,
-    x: raw[i][0],
-    y: raw[i][1],
+    x: normalize(raw[i][0], minX, maxX),
+    y: normalize(raw[i][1], minY, maxY),
     color: echo.semanticColor,
     insight: echo.insight,
     date: echo.createdAt,

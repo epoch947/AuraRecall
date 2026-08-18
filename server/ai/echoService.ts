@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { GenerateEchoRequest, GeneratedEcho } from '@/features/journal/contracts'
 import { generatedEchoSchema } from '@/features/journal/contracts'
+import { toImageDataUrl } from '@/features/journal/lib/imageData'
 import { getOpenAIClient } from '@/server/ai/client'
 import { ECHO_SYSTEM_PROMPT } from '@/server/ai/prompts'
 import { createPublicEcho } from '@/server/db/repositories/publicEchoRepository'
@@ -46,26 +47,28 @@ export async function generateEcho(
     JSON.parse(completion.choices[0].message.content ?? '{}'),
   )
 
-  let imageUrl: string | null = null
-  try {
-    const imagePrompt =
-      `A wide cinematic landscape representing the feeling of ${generated.keyword}. ` +
-      `The dominant color scheme must be ${generated.semanticColor} tones with soft, misty lighting. ` +
-      'Minimalist composition, deep depth of field, Wabi-sabi aesthetic, 2700K warm glow, ' +
-      'high-end fine art photography. No text. No people. No logos.'
+  const imagePrompt =
+    `A wide cinematic landscape representing the feeling of ${generated.keyword}. ` +
+    `The dominant color scheme must be ${generated.semanticColor} tones with soft, misty lighting. ` +
+    'Minimalist composition, deep depth of field, Wabi-sabi aesthetic, 2700K warm glow, ' +
+    'high-end fine art photography. No text. No people. No logos.'
 
-    const image = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: imagePrompt,
-      size: '1792x1024',
-      quality: 'standard',
-      n: 1,
-    })
-    imageUrl = image.data?.[0]?.url ?? null
-  } catch (error) {
-    console.error('[generate-echo] DALL-E 3 failed:', error)
-    imageUrl = '/assets/4_1_runtime_cover_mock.jpg'
+  const image = await openai.images.generate({
+    model: 'gpt-image-2',
+    prompt: imagePrompt,
+    size: '1536x1024',
+    quality: 'medium',
+    output_format: 'webp',
+    output_compression: 80,
+    n: 1,
+  })
+  const encodedImage = image.data?.[0]?.b64_json
+
+  if (!encodedImage) {
+    throw new Error('OpenAI image generation completed without image data')
   }
+
+  const imageUrl = toImageDataUrl(encodedImage, 'webp')
 
   return {
     generated,
@@ -80,6 +83,7 @@ export async function generateEcho(
 export async function persistPublicEcho(
   input: GenerateEchoRequest,
   generated: GeneratedEcho,
+  authorId: string,
 ): Promise<void> {
   const embedding = await getOpenAIClient().embeddings.create({
     model: 'text-embedding-3-small',
@@ -91,6 +95,6 @@ export async function persistPublicEcho(
     insight: generated.socraticQuestion,
     weather: input.weather,
     embedding: embedding.data[0].embedding,
-    authorId: input.userId ?? null,
+    authorId,
   })
 }

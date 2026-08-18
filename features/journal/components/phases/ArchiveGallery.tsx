@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Moon } from 'lucide-react'
+import { Moon } from 'lucide-react'
 import { useRitualStore, type EchoRecord } from '@/features/journal/store/useRitualStore'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
 import TopographyMap from '@/features/journal/components/TopographyMap'
 import type { Pattern } from '@/features/journal/contracts'
+import BackControl from '@/features/navigation/components/BackControl'
 
 function MemoryPixel({
   record,
@@ -31,7 +32,7 @@ function MemoryPixel({
 }
 
 export default function ArchiveGallery() {
-  const { pastEchoes: rawEchoes, advanceTo } = useRitualStore()
+  const { pastEchoes: rawEchoes, leaveRitual } = useRitualStore()
   // Deduplicate by ID — guards against stale persisted store having duplicate entries
   const seen = new Set<string>()
   const pastEchoes = rawEchoes.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
@@ -39,6 +40,17 @@ export default function ArchiveGallery() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [patterns, setPatterns] = useState<Pattern[] | null>(null)
   const [viewMode, setViewMode] = useState<'mosaic' | 'topography'>('topography')
+
+  useEffect(() => {
+    if (!patterns) return
+
+    function closeReport(event: KeyboardEvent) {
+      if (event.key === 'Escape') setPatterns(null)
+    }
+
+    window.addEventListener('keydown', closeReport)
+    return () => window.removeEventListener('keydown', closeReport)
+  }, [patterns])
 
   async function handleAnalyze() {
     setIsAnalyzing(true)
@@ -72,16 +84,8 @@ export default function ArchiveGallery() {
       className="relative w-full h-full bg-oatmeal overflow-y-auto"
     >
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-oatmeal/90 backdrop-blur-sm px-8 pt-8 pb-4 flex items-center gap-6">
-        <button
-          onClick={() => advanceTo('ENTRY')}
-          className="flex items-center gap-2 font-mono text-[10px] text-charcoal/50
-                     hover:text-charcoal tracking-[0.25em] uppercase
-                     transition-colors duration-300"
-        >
-          <ArrowLeft size={12} strokeWidth={1.5} />
-          Back to Present
-        </button>
+      <div className="sticky top-0 z-20 flex items-center gap-4 bg-oatmeal/90 pb-4 pl-4 pr-16 pt-4 backdrop-blur-sm sm:gap-6 sm:pl-8 sm:pr-20 sm:pt-6">
+        <BackControl onClick={leaveRitual} label="Back to present" compactOnMobile />
         <p className="font-mono text-[10px] text-charcoal/30 tracking-[0.35em] uppercase">
           Aura Topography
         </p>
@@ -169,6 +173,9 @@ export default function ArchiveGallery() {
         {patterns && (
           <motion.div
             key="pattern-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="moon-report-title"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -176,7 +183,18 @@ export default function ArchiveGallery() {
             className="fixed inset-0 z-50 bg-charcoal/95 backdrop-blur-md
                        flex flex-col items-center justify-center overflow-y-auto px-8 py-16"
           >
-            <p className="font-mono text-[10px] text-oatmeal/30 tracking-[0.35em] uppercase mb-24">
+            <BackControl
+              onClick={() => setPatterns(null)}
+              label="Close report"
+              tone="on-dark"
+              icon="close"
+              compactOnMobile
+              className="fixed left-4 top-4 z-[60] sm:left-6 sm:top-5"
+            />
+            <p
+              id="moon-report-title"
+              className="font-mono text-[10px] text-oatmeal/30 tracking-[0.35em] uppercase mb-24"
+            >
               Subconscious Patterns
             </p>
             <motion.div
@@ -212,7 +230,7 @@ export default function ArchiveGallery() {
               className="mt-24 font-mono text-[10px] text-oatmeal/30 hover:text-oatmeal/70
                          tracking-[0.35em] uppercase transition-colors duration-300"
             >
-              Return
+              Return to archive
             </button>
           </motion.div>
         )}

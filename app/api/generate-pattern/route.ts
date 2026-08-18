@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server'
 import { generatePatternsRequestSchema } from '@/features/journal/contracts'
 import { createMockPatterns, generatePatterns } from '@/server/ai/patternService'
+import { requireCurrentAppUser } from '@/server/auth/currentUser'
+import { authenticationErrorResponse } from '@/server/auth/errors'
 
 export async function POST(request: Request) {
+  try {
+    await requireCurrentAppUser()
+  } catch (error) {
+    const response = authenticationErrorResponse(error)
+    if (response) return response
+    throw error
+  }
+
   if (process.env.USE_MOCK_API === 'true') {
     await new Promise((resolve) => setTimeout(resolve, 2000))
     return NextResponse.json(createMockPatterns())

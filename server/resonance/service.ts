@@ -9,10 +9,15 @@ import {
 
 type ReleaseEchoInput = z.infer<typeof releaseEchoRequestSchema>
 
-export async function listLatestEchoes() {
-  return listLatestPublicEchoes(40)
+export async function listLatestEchoes(viewerId: string | null = null) {
+  const echoes = await listLatestPublicEchoes(40)
+  return echoes.map(({ authorId, ...echo }) => ({
+    ...echo,
+    canWhisper: authorId !== null,
+    isOwn: viewerId !== null && authorId === viewerId,
+  }))
 }
 
-export async function releaseEcho(input: ReleaseEchoInput) {
-  return createPublicEcho(input)
+export async function releaseEcho(input: ReleaseEchoInput, authorId: string) {
+  return createPublicEcho({ ...input, authorId })
 }

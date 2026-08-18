@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import Image from 'next/image'
-import { Wind } from 'lucide-react'
+import { MapPin, RefreshCw, Wind, X } from 'lucide-react'
 import { useRitualStore, type EchoRecord } from '@/features/journal/store/useRitualStore'
 import { useDebounce } from '@/features/journal/hooks/useDebounce'
+import { useCurrentWeather } from '@/features/journal/hooks/useCurrentWeather'
 import { extractMoodColor } from '@/features/journal/lib/semanticColor'
+import { formatWeatherLabel } from '@/features/journal/lib/weather'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
+import BackControl from '@/features/navigation/components/BackControl'
 
 // ─── Echo Whisper helpers ─────────────────────────────────────────────────────
 
@@ -53,34 +56,19 @@ export default function SamplingPhase() {
     setMoodText,
     moodColor,
     setMoodColor,
-    setWeatherData,
-    weatherData,
+    leaveRitual,
     resetRitual,
     pastEchoes,
   } = useRitualStore()
 
-  const [weatherLoading, setWeatherLoading] = useState(true)
+  const { weatherData, status, message, requestWeather, removeWeather, isLoading } =
+    useCurrentWeather()
   const [isDissolving, setIsDissolving] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const textareaControls = useAnimation()
 
   const debouncedText = useDebounce(moodText, 500)
   const canSeal = moodText.length >= 10
-
-  // Fetch weather on mount
-  useEffect(() => {
-    fetch('/api/weather')
-      .then((r) => r.json())
-      .then((data) => {
-        setWeatherData(data)
-        setWeatherLoading(false)
-      })
-      .catch(() => {
-        setWeatherData({ description: 'Unknown Skies', code: 'unknown' })
-        setWeatherLoading(false)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -123,6 +111,13 @@ export default function SamplingPhase() {
       className="relative w-full h-full flex flex-col items-center justify-center"
       style={{ backgroundColor: moodColor, transition: 'background-color 3000ms ease-in-out' }}
     >
+      <BackControl
+        onClick={leaveRitual}
+        label="Leave ritual"
+        compactOnMobile
+        className="absolute left-4 top-4 z-30 sm:left-6 sm:top-5"
+      />
+
       {/* Echo Whisper — ghost from the past */}
       <AnimatePresence>
         {echoMatch && !isDissolving && (
@@ -159,10 +154,13 @@ export default function SamplingPhase() {
         />
       </div>
 
-      {/* Weather badge */}
-      <div className="absolute top-6 right-6 z-10 h-10">
+      {/* User-controlled local weather */}
+      <div
+        aria-live="polite"
+        className="absolute top-6 right-16 z-20 flex max-w-[min(340px,calc(100vw-5rem))] flex-col items-end gap-2 sm:right-20"
+      >
         <AnimatePresence mode="wait">
-          {weatherLoading ? (
+          {isLoading ? (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
@@ -171,29 +169,79 @@ export default function SamplingPhase() {
               className="flex items-center gap-2 bg-linen/70 backdrop-blur-sm
                          px-3 py-2 rounded-full border border-sage/20"
             >
+              <RefreshCw size={13} strokeWidth={1.5} className="animate-spin text-sage/70" />
               <span className="font-mono text-xs text-sage/70 tracking-wide animate-pulse">
-                reading skies…
+                {status === 'locating' ? 'finding your horizon…' : 'reading local skies…'}
               </span>
             </motion.div>
-          ) : (
+          ) : weatherData ? (
             <motion.div
               key="data"
               initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              className="flex items-center gap-2 bg-linen/80 backdrop-blur-sm
-                         px-3 py-2 rounded-full border border-sage/30"
+              className="flex flex-col items-end gap-1.5"
             >
-              <Image
-                src="/assets/2_2.png"
-                alt="weather"
-                width={18}
-                height={18}
-                className="object-contain opacity-70 rounded-full"
-              />
-              <span className="font-mono text-xs text-charcoal tracking-wide">
-                {weatherData?.description}
-              </span>
+              <div
+                className="flex items-center gap-2 rounded-full border border-sage/30
+                           bg-linen/80 px-3 py-2 backdrop-blur-sm"
+              >
+                <Image
+                  src="/assets/2_2.png"
+                  alt=""
+                  width={18}
+                  height={18}
+                  className="rounded-full object-contain opacity-70"
+                />
+                <span className="font-mono text-xs tracking-wide text-charcoal">
+                  {formatWeatherLabel(weatherData)}
+                </span>
+                <button
+                  type="button"
+                  onClick={removeWeather}
+                  aria-label="Remove local weather"
+                  className="text-charcoal/35 transition-colors hover:text-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/60"
+                >
+                  <X size={13} strokeWidth={1.5} />
+                </button>
+              </div>
+              <a
+                href="https://open-meteo.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="pr-2 font-mono text-[8px] tracking-wider text-charcoal/35 transition-colors hover:text-charcoal/60"
+              >
+                Weather data by Open-Meteo
+              </a>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-end gap-2"
+            >
+              <button
+                type="button"
+                onClick={requestWeather}
+                className="flex items-center gap-2 rounded-full border border-sage/25
+                           bg-linen/65 px-3 py-2 font-mono text-[10px] uppercase
+                           tracking-[0.15em] text-charcoal/60 backdrop-blur-sm
+                           transition-colors hover:border-sage/50 hover:text-charcoal
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/60"
+              >
+                <MapPin size={13} strokeWidth={1.5} />
+                {status === 'idle' ? 'Add local weather' : 'Try current location'}
+              </button>
+              {message && (
+                <p
+                  role="status"
+                  className="max-w-xs text-right font-serif text-xs leading-relaxed text-charcoal/50"
+                >
+                  {message}
+                </p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

@@ -17,11 +17,12 @@ async function loadMigrations() {
   return Promise.all(
     files.map(async (file) => {
       const sql = await fs.readFile(path.join(migrationsDirectory, file), 'utf8')
+      const canonicalSql = sql.replace(/\r\n?/g, '\n')
       return {
         id: file.replace(/\.sql$/, ''),
         file,
         sql,
-        checksum: crypto.createHash('sha256').update(sql).digest('hex'),
+        checksum: crypto.createHash('sha256').update(canonicalSql).digest('hex'),
       }
     }),
   )
