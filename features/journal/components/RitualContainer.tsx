@@ -39,7 +39,7 @@ export default function RitualContainer() {
   const phase = useRitualStore((s) => s.phase)
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-oatmeal">
+    <div className="relative h-screen h-dvh w-full overflow-hidden bg-oatmeal">
       <AnimatePresence mode="wait">
         {phase === 'ENTRY' && <EntryPhase key="entry" />}
         {phase === 'ZEN_TIMER' && <ZenTimerPhase key="zen" />}
