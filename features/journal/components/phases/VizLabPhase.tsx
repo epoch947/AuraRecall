@@ -8,6 +8,7 @@ import {
 } from '@/features/journal/contracts'
 import { useRitualStore } from '@/features/journal/store/useRitualStore'
 import { useTypewriter } from '@/features/journal/hooks/useTypewriter'
+import { formatWeatherContext } from '@/features/journal/lib/weather'
 import { phaseVariants } from '@/features/journal/components/RitualContainer'
 
 const LOADING_MESSAGES = [
@@ -48,7 +49,7 @@ export default function VizLabPhase() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           moodText,
-          weather: weatherData?.description ?? 'Unknown Skies',
+          weather: formatWeatherContext(weatherData),
           isPublic: true,
         }),
       })

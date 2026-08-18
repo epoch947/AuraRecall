@@ -18,7 +18,7 @@ The repository follows a feature-first structure. Route files stay small, browse
 | `server/db/`          | PostgreSQL pool, transactions, models, and repositories        |
 | `server/messaging/`   | Conversation authorization and persistence                     |
 | `server/resonance/`   | Public echo queries and writes                                 |
-| `server/weather/`     | Geolocation and weather-provider integration                   |
+| `server/weather/`     | Privacy-scoped weather-provider integration                    |
 | `database/`           | Versioned PostgreSQL migrations                                |
 
 The main request flow is:
@@ -112,5 +112,7 @@ Use `npm run check` for the first three checks together. `npm run format:check` 
 Clerk provides authentication and Google OAuth/OIDC. PostgreSQL remains the authorization source of truth: the server maps the signed session to an internal `users.id`, validates account status, derives message participants from database relationships, and checks conversation membership at the resource boundary. Clerk usernames are synchronized only as optional profile data and are never trusted as session identity. Browser requests never choose participant or sender IDs, and API responses expose viewer-relative flags instead of other users' internal identifiers.
 
 Raw journal text is sent to OpenAI for generation and embeddings. Public persistence stores the generated color, reflective question, weather, embedding, and internal author reference; it does not store the raw journal text. Historical browser UUIDs are retained as non-authenticatable `LEGACY_GUEST` rows so older data remains referentially valid.
+
+Local weather is optional and requested only after an explicit user gesture. Device coordinates are rounded to two decimal places in the browser, used once to query current conditions, and never written to PostgreSQL, browser storage, application logs, or OpenAI prompts. Only the resulting location-free weather summary is used by the journal pipeline. Weather data is provided by [Open-Meteo](https://open-meteo.com/).
 
 The private Memory Archive remains local to the browser and is namespaced by the current Clerk user. Signing out or switching accounts resets the active journal state before loading the new account's local archive, preventing cross-account leakage on a shared browser.

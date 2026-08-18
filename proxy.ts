@@ -5,6 +5,7 @@ const isProtectedRoute = createRouteMatcher([
   '/api/generate-echo(.*)',
   '/api/generate-pattern(.*)',
   '/api/inbox(.*)',
+  '/api/weather(.*)',
   '/api/whisper(.*)',
 ])
 

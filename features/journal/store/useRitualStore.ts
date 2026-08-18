@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
 import { isInlineImageDataUrl } from '@/features/journal/lib/imageData'
+import { formatWeatherContext } from '@/features/journal/lib/weather'
 
 export type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
 
@@ -20,7 +21,7 @@ interface RitualState {
   advanceTo: (phase: RitualPhase) => void
   setMoodText: (text: string) => void
   setMoodColor: (color: string) => void
-  setWeatherData: (data: WeatherData) => void
+  setWeatherData: (data: WeatherData | null) => void
   setEchoData: (data: EchoData) => void
   markZenCompleted: () => void
   resetRitual: () => void
@@ -213,7 +214,7 @@ export const useRitualStore = create<RitualState>()(
                   createdAt: new Date().toISOString(),
                   originalText: state.moodText,
                   semanticColor: state.moodColor,
-                  weather: state.weatherData?.description ?? 'Unknown Skies',
+                  weather: formatWeatherContext(state.weatherData),
                   imageUrl: isInlineImageDataUrl(state.echoData.imageUrl)
                     ? null
                     : state.echoData.imageUrl,

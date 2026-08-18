@@ -2,6 +2,38 @@ import { z } from 'zod'
 
 const semanticColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/)
 
+export const weatherCodeSchema = z.enum([
+  'sun',
+  'cloud',
+  'mist',
+  'rain',
+  'snow',
+  'storm',
+  'unknown',
+])
+
+export const weatherLookupRequestSchema = z.object({
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+})
+
+export const weatherDataSchema = z.object({
+  description: z.string().trim().min(1).max(100),
+  code: weatherCodeSchema,
+  temperatureC: z.number().finite().min(-100).max(70),
+  apparentTemperatureC: z.number().finite().min(-120).max(80),
+  windSpeedKmh: z.number().finite().min(0).max(500),
+  isDay: z.boolean(),
+  observedAt: z.string().datetime({ offset: true }),
+})
+
+export const weatherLookupErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.literal('WEATHER_UNAVAILABLE'),
+    message: z.string().trim().min(1).max(200),
+  }),
+})
+
 export const generateEchoRequestSchema = z.object({
   moodText: z.string().trim().min(10).max(5000),
   weather: z.string().trim().min(1).max(200),
@@ -47,11 +79,6 @@ export const patternsResponseSchema = z.object({
   patterns: z.array(patternSchema).length(3),
 })
 
-export interface WeatherData {
-  description: string
-  code: string
-}
-
 export interface EchoData {
   imageUrl: string | null
   insight: string
@@ -72,5 +99,8 @@ export type GenerateEchoRequest = z.infer<typeof generateEchoRequestSchema>
 export type GeneratedEcho = z.infer<typeof generatedEchoSchema>
 export type EchoGenerationResponse = z.infer<typeof echoGenerationResponseSchema>
 export type EchoGenerationErrorResponse = z.infer<typeof echoGenerationErrorResponseSchema>
+export type WeatherLookupRequest = z.infer<typeof weatherLookupRequestSchema>
+export type WeatherData = z.infer<typeof weatherDataSchema>
+export type WeatherLookupErrorResponse = z.infer<typeof weatherLookupErrorResponseSchema>
 export type EchoSummary = z.infer<typeof echoSummarySchema>
 export type Pattern = z.infer<typeof patternSchema>

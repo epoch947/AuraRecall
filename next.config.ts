@@ -1,5 +1,14 @@
 import type { NextConfig } from 'next'
 
-const nextConfig: NextConfig = {}
+const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [{ key: 'Permissions-Policy', value: 'geolocation=(self)' }],
+      },
+    ]
+  },
+}
 
 export default nextConfig

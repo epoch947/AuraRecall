@@ -5,6 +5,8 @@ import {
   echoGenerationResponseSchema,
   generateEchoRequestSchema,
   generatedEchoSchema,
+  weatherDataSchema,
+  weatherLookupRequestSchema,
 } from './contracts'
 
 describe('journal contracts', () => {
@@ -53,6 +55,27 @@ describe('journal contracts', () => {
         code: 'AI_GENERATION_UNAVAILABLE',
         message: 'We could not create your visual echo right now.',
       },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a rounded device coordinate request', () => {
+    expect(
+      weatherLookupRequestSchema.safeParse({ latitude: 40.71, longitude: -74.01 }).success,
+    ).toBe(true)
+    expect(weatherLookupRequestSchema.safeParse({ latitude: 91, longitude: 0 }).success).toBe(false)
+  })
+
+  it('accepts a structured weather snapshot without location data', () => {
+    const result = weatherDataSchema.safeParse({
+      description: 'Clear Sky',
+      code: 'sun',
+      temperatureC: 21.5,
+      apparentTemperatureC: 21,
+      windSpeedKmh: 8.4,
+      isDay: true,
+      observedAt: '2026-08-18T03:00:00.000Z',
     })
 
     expect(result.success).toBe(true)
