@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
+import { isInlineImageDataUrl } from '@/features/journal/lib/imageData'
 
 export type { EchoData, EchoRecord, WeatherData } from '@/features/journal/contracts'
 
@@ -213,7 +214,9 @@ export const useRitualStore = create<RitualState>()(
                   originalText: state.moodText,
                   semanticColor: state.moodColor,
                   weather: state.weatherData?.description ?? 'Unknown Skies',
-                  imageUrl: state.echoData.imageUrl,
+                  imageUrl: isInlineImageDataUrl(state.echoData.imageUrl)
+                    ? null
+                    : state.echoData.imageUrl,
                   insight: state.echoData.insight,
                 },
               ]

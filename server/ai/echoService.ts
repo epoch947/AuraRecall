@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { GenerateEchoRequest, GeneratedEcho } from '@/features/journal/contracts'
 import { generatedEchoSchema } from '@/features/journal/contracts'
+import { toImageDataUrl } from '@/features/journal/lib/imageData'
 import { getOpenAIClient } from '@/server/ai/client'
 import { ECHO_SYSTEM_PROMPT } from '@/server/ai/prompts'
 import { createPublicEcho } from '@/server/db/repositories/publicEchoRepository'
@@ -53,17 +54,21 @@ export async function generateEcho(
     'high-end fine art photography. No text. No people. No logos.'
 
   const image = await openai.images.generate({
-    model: 'dall-e-3',
+    model: 'gpt-image-2',
     prompt: imagePrompt,
-    size: '1792x1024',
-    quality: 'standard',
+    size: '1536x1024',
+    quality: 'medium',
+    output_format: 'webp',
+    output_compression: 80,
     n: 1,
   })
-  const imageUrl = image.data?.[0]?.url
+  const encodedImage = image.data?.[0]?.b64_json
 
-  if (!imageUrl) {
-    throw new Error('OpenAI image generation completed without an image URL')
+  if (!encodedImage) {
+    throw new Error('OpenAI image generation completed without image data')
   }
+
+  const imageUrl = toImageDataUrl(encodedImage, 'webp')
 
   return {
     generated,
