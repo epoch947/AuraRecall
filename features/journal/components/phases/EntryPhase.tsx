@@ -56,10 +56,10 @@ export default function EntryPhase() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50" />
 
       {/* Scrollable foreground keeps the cinematic background fixed on compact screens. */}
-      <div className="relative z-10 h-full touch-pan-y overflow-y-auto overscroll-y-contain">
+      <div className="relative z-10 h-full touch-pan-y overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
         <div
           className="relative flex min-h-full flex-col px-4
-                     pb-[calc(1.5rem+env(safe-area-inset-bottom))]
+                     pb-[calc(5rem+env(safe-area-inset-bottom))]
                      pt-[calc(4.5rem+env(safe-area-inset-top))]
                      sm:px-0 sm:py-0"
         >
