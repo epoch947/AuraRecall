@@ -33,7 +33,7 @@ Create a Clerk webhook endpoint at:
 https://<deployment-domain>/api/webhooks/clerk
 ```
 
-Subscribe to `user.created`, `user.updated`, and `user.deleted`. Copy that endpoint's signing secret to `CLERK_WEBHOOK_SIGNING_SECRET` in the matching Vercel environment. The route verifies every signature and records event IDs so a retry cannot be processed twice.
+Subscribe to `user.created`, `user.updated`, `user.deleted`, and `session.created`. Copy that endpoint's signing secret to `CLERK_WEBHOOK_SIGNING_SECRET` in the matching Vercel environment. The route verifies every signature and records event IDs so a retry cannot be processed twice. `session.created` advances `users.last_login_at` on every successful sign-in, including when session and user webhooks arrive out of order.
 
 For local webhook testing, expose the local server through a trusted HTTPS tunnel and create a separate development endpoint whose secret is stored only in the local `.env` file.
 
@@ -58,6 +58,7 @@ Existing archives under the old unscoped browser key are intentionally not attac
 - Signed-out visitors can view the landing page and resonance pool, but cannot open the inbox or call protected AI and messaging APIs.
 - Google sign-up creates one Clerk user and one `users` row with `account_type = 'REGISTERED'`.
 - Setting or changing a Clerk username is reflected in `users.username`; users without one remain valid.
+- Signing in advances `users.last_login_at` without creating a duplicate user.
 - A signed-in journal entry can create an echo associated with the internal PostgreSQL user ID.
 - A whisper derives its receiver from the echo author; request bodies containing participant IDs are rejected.
 - Only conversation participants can list, open, or reply to a conversation.

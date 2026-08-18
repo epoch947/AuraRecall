@@ -134,7 +134,9 @@ export async function upsertAuthenticatedUser(
         updated_at = now(),
         last_login_at = CASE
           WHEN users.status = 'DELETED' THEN users.last_login_at
-          ELSE COALESCE(EXCLUDED.last_login_at, users.last_login_at)
+          WHEN EXCLUDED.last_login_at IS NULL THEN users.last_login_at
+          WHEN users.last_login_at IS NULL THEN EXCLUDED.last_login_at
+          ELSE GREATEST(users.last_login_at, EXCLUDED.last_login_at)
         END
       RETURNING ${userColumns}
     `,
@@ -148,6 +150,39 @@ export async function upsertAuthenticatedUser(
       input.avatarUrl,
       input.lastLoginAt,
     ],
+  )
+  return mapUser(result.rows[0])
+}
+
+export async function recordAuthenticatedUserLogin(
+  authProvider: 'clerk',
+  authSubject: string,
+  lastLoginAt: Date,
+  database: DatabaseExecutor = getPool(),
+): Promise<UserRecord> {
+  const result = await database.query<UserRow>(
+    `
+      INSERT INTO users (
+        auth_provider,
+        auth_subject,
+        account_type,
+        last_login_at
+      )
+      VALUES ($1, $2, 'REGISTERED', $3)
+      ON CONFLICT (auth_provider, auth_subject) DO UPDATE
+      SET
+        updated_at = CASE
+          WHEN users.status = 'DELETED' THEN users.updated_at
+          ELSE now()
+        END,
+        last_login_at = CASE
+          WHEN users.status = 'DELETED' THEN users.last_login_at
+          WHEN users.last_login_at IS NULL THEN EXCLUDED.last_login_at
+          ELSE GREATEST(users.last_login_at, EXCLUDED.last_login_at)
+        END
+      RETURNING ${userColumns}
+    `,
+    [authProvider, authSubject, lastLoginAt],
   )
   return mapUser(result.rows[0])
 }
